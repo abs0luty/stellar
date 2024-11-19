@@ -1,6 +1,6 @@
 use lasso::Spur;
 
-use crate::location::{ByteLocation, Span, Spanned};
+use crate::location::{Location, Span, Spanned};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
@@ -21,19 +21,19 @@ pub enum Token {
     },
     EOF {
         /// Location of the last byte in the source file.
-        last_byte_location: ByteLocation,
+        location: Location,
     },
 }
 
 impl Spanned for Token {
     fn span(&self) -> Span {
         match self {
-            Self::EOF { last_byte_location} => Span {
-                start: *last_byte_location,
-                end: last_byte_location.next_byte_location(),
+            Self::EOF { location} => Span {
+                start: *location,
+                end: Location::new(location.line, location.column + 1, location.index + 1)
             },
             Self::Identifier { span, .. }
-            | Self::Keyword { span, .. } => span.to_owned(),
+            | Self::Keyword { span, .. } => *span,
         }
     }
 }

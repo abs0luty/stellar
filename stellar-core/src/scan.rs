@@ -2,10 +2,15 @@ use lasso::Rodeo;
 
 use crate::{
     cursor::Cursor,
-    location::Span,
+    location::{Span, Spanned},
     token::{Keyword, Token},
 };
 
+/// Scans a given Stellar source text and converts into a vector of tokens.
+///
+/// # Errors
+/// In case any obvious syntax errors, which affected the scanning process
+/// were found, [`ScannerError`] will be returned.
 pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<Vec<Token>, ScannerError> {
     let mut cursor = Cursor::new(source);
     let mut tokens = Vec::new();
@@ -25,11 +30,7 @@ pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<Vec<Token>, ScannerError>
     Ok(tokens)
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ScannerError {
-    UnexpectedCharacter(char),
-}
-
+/// Scans the next token in the source text and advances position of the [`Cursor`].
 fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, ScannerError> {
     while let Some(c) = cursor.peek() {
         if c.is_whitespace() {
@@ -38,19 +39,30 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
         }
 
         match c {
-            c if c.is_alphabetic() || c == '_' => {
-                return Ok(scan_identifier_or_keyword(cursor, rodeo))
+            c if c.is_alphabetic() || c == '_' => return Ok(scan_name(cursor, rodeo)),
+            _ => {
+                let start = cursor.location();
+                cursor.next();
+
+                return Err(ScannerError::UnexpectedCharacter {
+                    character: c,
+                    span: Span {
+                        start,
+                        end: cursor.location(),
+                    },
+                });
             }
-            _ => return Err(ScannerError::UnexpectedCharacter(c)),
         }
     }
 
     Ok(Token::EOF {
-        last_byte_location: cursor.location(),
+        location: cursor.location(),
     })
 }
 
-fn scan_identifier_or_keyword(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
+/// Scans the next candidate for identifier token in the source text and if
+/// its name matches any known keywords returns keyword token.
+fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     let mut name = String::new();
     let start_location = cursor.location();
 
@@ -85,13 +97,26 @@ fn scan_identifier_or_keyword(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ScannerError {
+    UnexpectedCharacter { character: char, span: Span },
+}
+
+impl Spanned for ScannerError {
+    fn span(&self) -> Span {
+        match self {
+            Self::UnexpectedCharacter { span, .. } => *span,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use lasso::Rodeo;
 
     use crate::{
-        location::{ByteLocation, Span},
-        scan::scan,
+        location::{Location, Span},
+        scan::{scan, ScannerError},
         token::{Keyword, Token},
     };
 
@@ -103,29 +128,41 @@ mod tests {
         assert_eq!(
             tokens,
             vec![Token::EOF {
-                last_byte_location: ByteLocation::start_of_file()
+                location: Location::sof()
             }]
         )
     }
 
     #[test]
+    fn test_unexpected_character() {
+        let mut rodeo = Rodeo::new();
+        assert_eq!(
+            scan("!", &mut rodeo),
+            Err(ScannerError::UnexpectedCharacter {
+                character: '!',
+                span: Span::new(Location::sof(), Location::new(1, 1, 1))
+            })
+        );
+    }
+
+    #[test]
     fn test_identifier_and_keyword() {
         let mut rodeo = Rodeo::new();
-        let tokens = scan("test wait", &mut rodeo).expect("Scanning should not fail");
+        let tokens = scan("wait time", &mut rodeo).expect("Scanning should not fail");
 
         assert_eq!(
             tokens,
             vec![
-                Token::Identifier {
-                    name: rodeo.get_or_intern("test"),
-                    span: Span::new(ByteLocation::start_of_file(), ByteLocation::new(1, 4, 4))
-                },
                 Token::Keyword {
                     keyword: Keyword::Wait,
-                    span: Span::new(ByteLocation::new(1, 5, 5), ByteLocation::new(1, 9, 9))
+                    span: Span::new(Location::sof(), Location::new(1, 4, 4))
+                },
+                Token::Identifier {
+                    name: rodeo.get_or_intern("time"),
+                    span: Span::new(Location::new(1, 5, 5), Location::new(1, 9, 9))
                 },
                 Token::EOF {
-                    last_byte_location: ByteLocation::new(1, 9, 9)
+                    location: Location::new(1, 9, 9)
                 }
             ]
         )

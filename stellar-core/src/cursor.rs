@@ -1,21 +1,21 @@
 use std::{iter::Peekable, str::Chars};
 
-use crate::location::ByteLocation;
+use crate::location::Location;
 
 pub struct Cursor<'a> {
     input: Peekable<Chars<'a>>,
-    location: ByteLocation,
+    location: Location,
 }
 
 impl<'a> Cursor<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
             input: source.chars().peekable(),
-            location: ByteLocation::start_of_file(),
+            location: Location::sof(),
         }
     }
 
-    pub fn location(&self) -> ByteLocation {
+    pub fn location(&self) -> Location {
         return self.location;
     }
 
