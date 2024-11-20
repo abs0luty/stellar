@@ -53,7 +53,11 @@ pub enum Token {
 
 impl Token {
     pub fn is_eof(&self) -> bool {
-        matches!(self, Self::EOF {..})
+        matches!(self, Self::EOF { .. })
+    }
+
+    pub fn is_identifier(&self) -> bool {
+        matches!(self, Self::Identifier { .. })
     }
 }
 
@@ -102,7 +106,7 @@ impl TokenStream {
 
 pub struct TokenStreamCursor {
     stream: TokenStream,
-    location: usize,
+    pub location: usize,
 }
 
 impl TokenStreamCursor {
@@ -120,6 +124,6 @@ impl TokenStreamCursor {
     }
 
     pub fn peek(&mut self) -> Token {
-        self.stream.get(self.location + 1)
+        self.stream.get(self.location)
     }
 }
