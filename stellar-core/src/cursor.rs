@@ -3,6 +3,7 @@ use std::{iter::Peekable, str::Chars};
 use crate::location::Location;
 
 pub struct Cursor<'a> {
+    source: &'a str,
     input: Peekable<Chars<'a>>,
     location: Location,
 }
@@ -10,9 +11,14 @@ pub struct Cursor<'a> {
 impl<'a> Cursor<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
+            source,
             input: source.chars().peekable(),
             location: Location::sof(),
         }
+    }
+
+    pub fn source(&self) -> &'a str {
+        return self.source;
     }
 
     pub fn location(&self) -> Location {

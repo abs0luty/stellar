@@ -6,16 +6,24 @@ use crate::location::{Location, Span, Spanned};
 pub enum Keyword {
     WithFx,
     WithSynth,
-    Wait
+    Wait,
+    Sequence,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Punctuation {
     LeftBrace,
-    RightBrace
+    RightBrace,
+    LeftBracket,
+    RightBracket,
+    Plus,
+    Minus,
+    PlusEq,
+    MinusEq,
+    Dot,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Token {
     Keyword {
         keyword: Keyword,
@@ -27,7 +35,15 @@ pub enum Token {
     },
     Punctuation {
         punctuation: Punctuation,
-        span: Span
+        span: Span,
+    },
+    Float {
+        value: f64,
+        span: Span,
+    },
+    Integer {
+        value: i64,
+        span: Span,
     },
     EOF {
         /// Location of the last byte in the source file.
@@ -35,16 +51,75 @@ pub enum Token {
     },
 }
 
+impl Token {
+    pub fn is_eof(&self) -> bool {
+        matches!(self, Self::EOF {..})
+    }
+}
+
 impl Spanned for Token {
     fn span(&self) -> Span {
         match self {
-            Self::EOF { location} => Span {
+            Self::EOF { location } => Span {
                 start: *location,
-                end: Location::new(location.line, location.column + 1, location.index + 1)
+                end: Location::new(location.line, location.column + 1, location.index + 1),
             },
             Self::Identifier { span, .. }
             | Self::Punctuation { span, .. }
-            | Self::Keyword { span, .. } => *span,
+            | Self::Keyword { span, .. }
+            | Self::Integer { span, .. }
+            | Self::Float { span, .. } => *span,
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TokenStream(Vec<Token>);
+
+impl TokenStream {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn push(&mut self, token: Token) {
+        self.0.push(token);
+    }
+
+    pub fn get(&self, index: usize) -> Token {
+        if index > self.0.len() {
+            self.0.last().copied().unwrap_or(Token::EOF {
+                location: Location::sof(),
+            })
+        } else {
+            self.0[index]
+        }
+    }
+
+    pub fn cursor(self) -> TokenStreamCursor {
+        TokenStreamCursor::new(self)
+    }
+}
+
+pub struct TokenStreamCursor {
+    stream: TokenStream,
+    location: usize,
+}
+
+impl TokenStreamCursor {
+    pub fn new(stream: TokenStream) -> Self {
+        Self {
+            stream,
+            location: 0,
+        }
+    }
+
+    pub fn next(&mut self) -> Token {
+        self.location += 1;
+
+        self.stream.get(self.location - 1)
+    }
+
+    pub fn peek(&mut self) -> Token {
+        self.stream.get(self.location + 1)
     }
 }
