@@ -6,6 +6,7 @@ use crate::location::{Location, Span, Spanned};
 pub enum Keyword {
     WithFx,
     WithSynth,
+    WithChannel,
     Wait,
     Sequence,
 }
@@ -56,6 +57,16 @@ impl Token {
         matches!(self, Self::EOF { .. })
     }
 
+    pub fn is_punctuation(&self, punctuation: Punctuation) -> bool {
+        match self {
+            Self::Punctuation {
+                punctuation: my_punctuation,
+                ..
+            } => punctuation == *my_punctuation,
+            _ => false,
+        }
+    }
+
     pub fn is_identifier(&self) -> bool {
         matches!(self, Self::Identifier { .. })
     }
@@ -64,10 +75,10 @@ impl Token {
 impl Spanned for Token {
     fn span(&self) -> Span {
         match self {
-            Self::EOF { location } => Span {
-                start: *location,
-                end: Location::new(location.line, location.column + 1, location.index + 1),
-            },
+            Self::EOF { location } => Span::new(
+                *location,
+                Location::new(location.line, location.column + 1, location.index + 1),
+            ),
             Self::Identifier { span, .. }
             | Self::Punctuation { span, .. }
             | Self::Keyword { span, .. }
@@ -106,7 +117,7 @@ impl TokenStream {
 
 pub struct TokenStreamCursor {
     stream: TokenStream,
-    pub location: usize,
+    location: usize,
 }
 
 impl TokenStreamCursor {

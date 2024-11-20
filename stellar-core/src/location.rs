@@ -26,8 +26,8 @@ impl Location {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Span {
-    pub start: Location,
-    pub end: Location,
+    start: Location,
+    end: Location,
 }
 
 impl Span {
@@ -37,6 +37,14 @@ impl Span {
 
     pub fn len(&self) -> u32 {
         self.start.index - self.end.index
+    }
+
+    pub fn start(self) -> Location {
+        self.start
+    }
+
+    pub fn end(self) -> Location {
+        self.end
     }
 }
 

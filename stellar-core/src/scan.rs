@@ -45,10 +45,7 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
 
                 return Ok(Token::Punctuation {
                     punctuation: $p,
-                    span: Span {
-                        start,
-                        end: cursor.location(),
-                    },
+                    span: Span::new(start, cursor.location()),
                 });
             }};
         }
@@ -66,10 +63,7 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
 
                 return Err(ScanError::UnexpectedCharacter {
                     character: c,
-                    span: Span {
-                        start,
-                        end: cursor.location(),
-                    },
+                    span: Span::new(start, cursor.location()),
                 });
             }
         }
@@ -100,6 +94,10 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     match name.as_str() {
         "with_fx" => Token::Keyword {
             keyword: Keyword::WithFx,
+            span,
+        },
+        "with_channel" => Token::Keyword {
+            keyword: Keyword::WithChannel,
             span,
         },
         "with_synth" => Token::Keyword {
@@ -142,7 +140,7 @@ fn scan_number_or_dot(cursor: &mut Cursor) -> Token {
     if end.index - start.index == 1 && has_dot {
         return Token::Punctuation {
             punctuation: Punctuation::Dot,
-            span: Span { start, end },
+            span: Span::new(start, end),
         };
     }
 
@@ -151,12 +149,12 @@ fn scan_number_or_dot(cursor: &mut Cursor) -> Token {
     if has_dot {
         Token::Float {
             value: lexeme.parse::<f64>().unwrap(),
-            span: Span { start, end },
+            span: Span::new(start, end),
         }
     } else {
         Token::Integer {
             value: lexeme.parse::<i64>().unwrap(),
-            span: Span { start, end },
+            span: Span::new(start, end),
         }
     }
 }
