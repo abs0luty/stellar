@@ -3,7 +3,7 @@ use lasso::Rodeo;
 use crate::{
     cursor::Cursor,
     location::{Span, Spanned},
-    token::{Keyword, Token},
+    token::{Keyword, Punctuation, Token},
 };
 
 /// Scans a given Stellar source text and converts into a vector of tokens.
@@ -38,8 +38,25 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
             continue;
         }
 
+        macro_rules! single_char_punctuation {
+            ($p:expr) => {{
+                let start = cursor.location();
+                cursor.next();
+
+                return Ok(Token::Punctuation {
+                    punctuation: $p,
+                    span: Span {
+                        start,
+                        end: cursor.location(),
+                    },
+                });
+            }};
+        }
+
         match c {
             c if c.is_alphabetic() || c == '_' => return Ok(scan_name(cursor, rodeo)),
+            '{' => single_char_punctuation!(Punctuation::LeftBrace),
+            '}' => single_char_punctuation!(Punctuation::RightBrace),
             _ => {
                 let start = cursor.location();
                 cursor.next();
@@ -64,7 +81,7 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
 /// its name matches any known keywords returns keyword token.
 fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     let mut name = String::new();
-    let start_location = cursor.location();
+    let start = cursor.location();
 
     while let Some(c) = cursor.peek() {
         if !c.is_alphanumeric() || c == '_' {
@@ -75,7 +92,7 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
         cursor.next();
     }
 
-    let span = Span::new(start_location, cursor.location());
+    let span = Span::new(start, cursor.location());
 
     match name.as_str() {
         "with_fx" => Token::Keyword {
@@ -117,7 +134,7 @@ mod tests {
     use crate::{
         location::{Location, Span},
         scan::{scan, ScannerError},
-        token::{Keyword, Token},
+        token::{Keyword, Punctuation, Token},
     };
 
     #[test]
@@ -142,6 +159,25 @@ mod tests {
                 character: '!',
                 span: Span::new(Location::sof(), Location::new(1, 1, 1))
             })
+        );
+    }
+
+    #[test]
+    fn test_punctuation() {
+        let mut rodeo = Rodeo::new();
+        let tokens = scan("{", &mut rodeo).expect("Scanning should not fail");
+
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Punctuation {
+                    punctuation: Punctuation::LeftBrace,
+                    span: Span::new(Location::sof(), Location::new(1, 1, 1))
+                },
+                Token::EOF {
+                    location: Location::new(1, 1, 1)
+                }
+            ]
         );
     }
 

@@ -9,6 +9,12 @@ pub enum Keyword {
     Wait
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Punctuation {
+    LeftBrace,
+    RightBrace
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Keyword {
@@ -18,6 +24,10 @@ pub enum Token {
     Identifier {
         name: Spur,
         span: Span,
+    },
+    Punctuation {
+        punctuation: Punctuation,
+        span: Span
     },
     EOF {
         /// Location of the last byte in the source file.
@@ -33,6 +43,7 @@ impl Spanned for Token {
                 end: Location::new(location.line, location.column + 1, location.index + 1)
             },
             Self::Identifier { span, .. }
+            | Self::Punctuation { span, .. }
             | Self::Keyword { span, .. } => *span,
         }
     }
