@@ -92,19 +92,8 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     let span = Span::new(start, cursor.location());
 
     match name.as_str() {
-        "with_fx" => Token::Keyword {
-            keyword: Keyword::WithFx,
-            span,
-        },
-        "with_channel" => {
-            dbg!("with_channel found");
-            Token::Keyword {
-                keyword: Keyword::WithChannel,
-                span,
-            }
-        }
-        "with_synth" => Token::Keyword {
-            keyword: Keyword::WithSynth,
+        "with" => Token::Keyword {
+            keyword: Keyword::With,
             span,
         },
         "wait" => Token::Keyword {

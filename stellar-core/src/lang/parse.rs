@@ -6,7 +6,9 @@ use crate::lang::{
 
 /// Parses a given token stream into Abstract Syntax Tree (AST).
 pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
-    let mut cursor = stream.into_cursor().expect("Invalid token stream");
+    let Some(mut cursor) = stream.into_cursor() else {
+        return Err(ParseError::InvalidTokenStream);
+    };
     let mut statements = Vec::new();
 
     while !cursor.peek().is_eof() {
@@ -53,20 +55,19 @@ fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseErr
             ..
         } => parse_sequence_statement(cursor),
         Token::Keyword {
-            keyword: Keyword::WithChannel,
+            keyword: Keyword::With,
             ..
-        } => parse_with_channel_statement(cursor),
+        } => parse_with_statement(cursor),
         token => Err(ParseError::ExpectedStatement { token }),
     }
 }
 
-fn parse_with_channel_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
-    cursor.next(); // 'with_channel'
+fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
+    cursor.next(); // 'with'
 
-    let channel = parse_expression(cursor)?;
     let block = parse_block(cursor)?;
 
-    Ok(Statement::WithChannel { channel, block })
+    Ok(Statement::With { block })
 }
 
 fn parse_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
@@ -92,13 +93,17 @@ fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement,
     };
     cursor.next();
 
+    let block = parse_block(cursor)?;
+
     Ok(Statement::Sequence {
         name: Name { name, span },
+        block,
     })
 }
 
 #[derive(Debug)]
 pub enum ParseError {
+    InvalidTokenStream,
     ExpectedExpression { token: Token },
     ExpectedStatement { token: Token },
     ExpectedIdentifier { token: Token },
@@ -110,7 +115,7 @@ mod tests {
     use lasso::Rodeo;
 
     use crate::lang::{
-        ast::{Name, Statement},
+        ast::{Block, Name, Statement},
         location::{Location, Span},
         scan::scan,
     };
@@ -129,7 +134,7 @@ mod tests {
     #[test]
     fn test_sequence() {
         let mut rodeo = Rodeo::new();
-        let token_stream = scan("sequence name", &mut rodeo).unwrap();
+        let token_stream = scan("sequence name {}", &mut rodeo).unwrap();
         let statements = parse(token_stream).unwrap();
 
         assert_eq!(
@@ -138,8 +143,27 @@ mod tests {
                 name: Name {
                     name: rodeo.get_or_intern("name"),
                     span: Span::new(Location::new(1, 9, 9), Location::new(1, 13, 13))
+                },
+                block: Block {
+                    statements: Vec::new(),
+                    span: Span::new(Location:: new(1, 14, 14), Location::new(1, 16, 16))
                 }
             }
         );
     }
 }
+
+// sequence test {
+//    with synth: piano { Cmaj7.play }
+// }
+//
+// loop {
+//      with synth: paino2, speed: 1.4, channel: 0 {
+//           test.play
+//      }
+// 
+//      # Plays this note parallel to test sequence 
+//      with channel: 1 {
+//          Cmaj4.play
+//      }
+// }

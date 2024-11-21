@@ -5,10 +5,10 @@ use crate::lang::location::Span;
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     Sequence {
-        name: Name
+        name: Name,
+        block: Block
     },
-    WithChannel {
-        channel: Expression,
+    With {
         block: Block,
     },
 }

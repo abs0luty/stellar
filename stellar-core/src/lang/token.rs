@@ -4,9 +4,7 @@ use crate::lang::location::{Location, Span, Spanned};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
-    WithFx,
-    WithSynth,
-    WithChannel,
+    With,
     Wait,
     Sequence,
 }
