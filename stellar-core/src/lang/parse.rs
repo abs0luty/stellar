@@ -23,7 +23,7 @@ fn force_next_punctuation(
     punctuation: Punctuation,
 ) -> Result<Token, ParseError> {
     let got = cursor.next();
-    if got.is_punctuation(punctuation) {
+    if !got.is_punctuation(punctuation) {
         return Err(ParseError::ExpectedPunctuation {
             expected: punctuation,
             got,
