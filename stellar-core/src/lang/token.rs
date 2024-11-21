@@ -25,6 +25,8 @@ pub enum Punctuation {
     PlusEq,
     MinusEq,
     Dot,
+    Colon,
+    Comma,
 }
 
 impl Punctuation {
@@ -45,15 +47,34 @@ impl Punctuation {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
+pub struct Identifier {
+    name: Spur,
+    span: Span,
+}
+
+impl Identifier {
+    pub fn new(name: Spur, span: Span) -> Self {
+        Self { name, span }
+    }
+
+    pub fn name(&self) -> Spur {
+        self.name
+    }
+}
+
+impl Spanned for Identifier {
+    fn span(&self) -> Span {
+        self.span
+    }
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Token {
     Keyword {
         keyword: Keyword,
         span: Span,
     },
-    Identifier {
-        name: Spur,
-        span: Span,
-    },
+    Identifier(Identifier),
     Punctuation {
         punctuation: Punctuation,
         span: Span,
@@ -135,7 +156,7 @@ impl Spanned for Token {
                 *location,
                 Location::new(location.line(), location.column() + 1, location.index() + 1),
             ),
-            Self::Identifier { span, .. }
+            Self::Identifier(Identifier { span, .. })
             | Self::Punctuation { span, .. }
             | Self::Keyword { span, .. }
             | Self::Integer { span, .. }

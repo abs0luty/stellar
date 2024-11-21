@@ -1,8 +1,10 @@
 use crate::lang::{
-    ast::{Block, Expression, Name, Statement},
+    ast::{Block, Expression, Statement},
     location::{Span, Spanned},
     token::{Keyword, Punctuation, Token, TokenStream, TokenStreamCursor},
 };
+
+use super::{ast::Property, token::Identifier};
 
 /// Parses a given token stream into Abstract Syntax Tree (AST).
 pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
@@ -17,22 +19,6 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
 
     Ok(statements)
 }
-
-fn force_next_punctuation(
-    cursor: &mut TokenStreamCursor,
-    punctuation: Punctuation,
-) -> Result<Token, ParseError> {
-    let got = cursor.next();
-    if !got.is_punctuation(punctuation) {
-        return Err(ParseError::ExpectedPunctuation {
-            expected: punctuation,
-            got,
-        });
-    }
-
-    Ok(got)
-}
-
 fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
     if !cursor.peek().is_punctuation(Punctuation::LeftBrace) {
         return Err(ParseError::ExpectedPunctuation {
@@ -71,12 +57,35 @@ fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseErr
     }
 }
 
+fn parse_property(cursor: &mut TokenStreamCursor) -> Result<Property, ParseError> {
+    let name = parse_identifier(cursor)?; // name
+    parse_punctuation(cursor, Punctuation::Colon)?; // ':'
+
+    let value = parse_expression(cursor, 0)?;
+
+    Ok(Property { name, value })
+}
+
 fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
     cursor.next(); // 'with'
 
+    let mut properties = Vec::new();
+
+    properties.push(parse_property(cursor)?);
+
+    while cursor.peek().is_punctuation(Punctuation::Comma) {
+        cursor.next();
+
+        if cursor.peek().is_punctuation(Punctuation::LeftBrace) {
+            break; // with a: test, b: 3, { } - still counts
+        }
+
+        properties.push(parse_property(cursor)?)
+    }
+
     let block = parse_block(cursor)?;
 
-    Ok(Statement::With { block })
+    Ok(Statement::With { properties, block })
 }
 
 fn parse_expression(
@@ -120,7 +129,7 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
 
             let expression = parse_expression(cursor, 0)?;
 
-            force_next_punctuation(cursor, Punctuation::RightParen)?; // ')'
+            parse_punctuation(cursor, Punctuation::RightParen)?; // ')'
 
             Ok(expression)
         }
@@ -142,26 +151,41 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
 fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
     cursor.next(); // 'sequence' keyword
 
-    let Token::Identifier { name, span } = cursor.peek() else {
-        return Err(ParseError::ExpectedIdentifier {
-            token: cursor.peek(),
-        });
-    };
-    cursor.next();
-
+    let name = parse_identifier(cursor)?;
     let block = parse_block(cursor)?;
 
-    Ok(Statement::Sequence {
-        name: Name { name, span },
-        block,
-    })
+    Ok(Statement::Sequence { name, block })
+}
+
+fn parse_identifier(cursor: &mut TokenStreamCursor) -> Result<Identifier, ParseError> {
+    let got = cursor.next();
+    let Token::Identifier(identifier) = got else {
+        return Err(ParseError::ExpectedIdentifier { got });
+    };
+
+    Ok(identifier)
+}
+
+fn parse_punctuation(
+    cursor: &mut TokenStreamCursor,
+    punctuation: Punctuation,
+) -> Result<Token, ParseError> {
+    let got = cursor.next();
+    if !got.is_punctuation(punctuation) {
+        return Err(ParseError::ExpectedPunctuation {
+            expected: punctuation,
+            got,
+        });
+    }
+
+    Ok(got)
 }
 
 #[derive(Debug)]
 pub enum ParseError {
     InvalidTokenStream,
     ExpectedExpression { token: Token },
-    ExpectedIdentifier { token: Token },
+    ExpectedIdentifier { got: Token },
     ExpectedPunctuation { expected: Punctuation, got: Token },
 }
 
@@ -170,9 +194,10 @@ mod tests {
     use lasso::Rodeo;
 
     use crate::lang::{
-        ast::{Block, Name, Statement},
+        ast::{Block, Expression, Property, Statement},
         location::{Location, Span},
         scan::scan,
+        token::Identifier,
     };
 
     use super::parse;
@@ -187,6 +212,45 @@ mod tests {
     }
 
     #[test]
+    fn test_with() {
+        let mut rodeo = Rodeo::new();
+        let token_stream = scan("with a: 3, b: 4, {}", &mut rodeo).unwrap();
+        let statements = parse(token_stream).unwrap();
+
+        assert_eq!(
+            statements.first().unwrap(),
+            &Statement::With {
+                properties: vec![
+                    Property {
+                        name: Identifier::new(
+                            rodeo.get_or_intern("a"),
+                            Span::new(Location::new(1, 5, 5), Location::new(1, 6, 6))
+                        ),
+                        value: Expression::Integer {
+                            value: 3,
+                            span: Span::new(Location::new(1, 8, 8), Location::new(1, 9, 9))
+                        }
+                    },
+                    Property {
+                        name: Identifier::new(
+                            rodeo.get_or_intern("b"),
+                            Span::new(Location::new(1, 11, 11), Location::new(1, 12, 12))
+                        ),
+                        value: Expression::Integer {
+                            value: 4,
+                            span: Span::new(Location::new(1, 14, 14), Location::new(1, 15, 15))
+                        }
+                    }
+                ],
+                block: Block {
+                    statements: vec![],
+                    span: Span::new(Location::new(1, 17, 17), Location::new(1, 19, 19))
+                }
+            }
+        );
+    }
+
+    #[test]
     fn test_sequence() {
         let mut rodeo = Rodeo::new();
         let token_stream = scan("sequence name {}", &mut rodeo).unwrap();
@@ -195,10 +259,10 @@ mod tests {
         assert_eq!(
             statements.first().unwrap(),
             &Statement::Sequence {
-                name: Name {
-                    name: rodeo.get_or_intern("name"),
-                    span: Span::new(Location::new(1, 9, 9), Location::new(1, 13, 13))
-                },
+                name: Identifier::new(
+                    rodeo.get_or_intern("name"),
+                    Span::new(Location::new(1, 9, 9), Location::new(1, 13, 13))
+                ),
                 block: Block {
                     statements: Vec::new(),
                     span: Span::new(Location::new(1, 14, 14), Location::new(1, 16, 16))

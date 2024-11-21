@@ -6,6 +6,8 @@ use crate::lang::{
     token::{Keyword, Punctuation, Token, TokenStream},
 };
 
+use super::token::Identifier;
+
 /// Scans a given Stellar source text and converts into a vector of tokens.
 ///
 /// # Errors
@@ -30,50 +32,82 @@ pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<TokenStream, ScanError> {
     Ok(stream)
 }
 
+macro_rules! match_punctuation {
+    ($char:expr, $cursor:expr, $start:expr,
+        { $($single:pat => $single_token:expr,)+ },
+        { $($first:pat,$second:pat => $pair_token:expr,)+ }) => {{
+        match ($char, $cursor.peek()) {
+            // Handle two-character punctuations
+            $(
+                ($first, Some($second)) => {
+                    $cursor.next();
+
+                    Ok(Token::Punctuation {
+                        punctuation: $pair_token,
+                        span: Span::new($start, $cursor.location()),
+                    })
+                },
+            )+
+            // Handle single-character punctuations
+            $(
+                ($single, _) => Ok(Token::Punctuation {
+                    punctuation: $single_token,
+                    span: Span::new($start, $cursor.location()),
+                }),
+            )+
+            // Handle unexpected character
+            _ => Err(ScanError::UnexpectedCharacter {
+                character: $char,
+                span: Span::new($start, $cursor.location()),
+            }),
+        }
+    }};
+}
+
 /// Scans the next token in the source text and advances position of the [`Cursor`].
 fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, ScanError> {
-    while let Some(c) = cursor.peek() {
-        if c.is_whitespace() {
-            cursor.next();
-            continue;
-        }
-
-        macro_rules! single_char_punctuation {
-            ($p:expr) => {{
-                let start = cursor.location();
-                cursor.next();
-
-                return Ok(Token::Punctuation {
-                    punctuation: $p,
-                    span: Span::new(start, cursor.location()),
-                });
-            }};
-        }
-
-        match c {
-            c if c.is_alphabetic() || c == '_' => return Ok(scan_name(cursor, rodeo)),
-            c if c.is_numeric() || c == '.' => return Ok(scan_number_or_dot(cursor)),
-            '{' => single_char_punctuation!(Punctuation::LeftBrace),
-            '}' => single_char_punctuation!(Punctuation::RightBrace),
-            '[' => single_char_punctuation!(Punctuation::LeftBracket),
-            ']' => single_char_punctuation!(Punctuation::RightBracket),
-            '(' => single_char_punctuation!(Punctuation::LeftParen),
-            ')' => single_char_punctuation!(Punctuation::RightParen),
-            _ => {
-                let start = cursor.location();
-                cursor.next();
-
-                return Err(ScanError::UnexpectedCharacter {
-                    character: c,
-                    span: Span::new(start, cursor.location()),
-                });
-            }
-        }
+    // Skipping whitespace characters
+    while cursor.peek().is_some_and(|c| c.is_whitespace()) {
+        cursor.next();
     }
 
-    Ok(Token::EOF {
-        location: cursor.location(),
-    })
+    let Some(c) = cursor.peek() else {
+        return Ok(Token::EOF {
+            location: cursor.location(),
+        });
+    };
+
+    match c {
+        c if c.is_alphabetic() || c == '_' => Ok(scan_name(cursor, rodeo)),
+        c if c.is_numeric() || c == '.' => Ok(scan_number_or_dot(cursor)),
+        _ => {
+            let start = cursor.location();
+            cursor.next();
+
+            match_punctuation!(
+                c,
+                cursor,
+                start,
+                {
+                    '-' => Punctuation::Minus,
+                    '+' => Punctuation::Plus,
+                    '{' => Punctuation::LeftBrace,
+                    '}' => Punctuation::RightBrace,
+                    '[' => Punctuation::LeftBracket,
+                    ']' => Punctuation::RightBracket,
+                    '(' => Punctuation::LeftParen,
+                    ')' => Punctuation::RightParen,
+                    ':' => Punctuation::Colon,
+                    '.' => Punctuation::Dot,
+                    ',' => Punctuation::Comma,
+                },
+                {
+                    '-', '=' => Punctuation::MinusEq,
+                    '+', '=' => Punctuation::PlusEq,
+                }
+            )
+        }
+    }
 }
 
 /// Scans the next candidate for identifier token in the source text and if
@@ -94,7 +128,7 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     let span = Span::new(start, cursor.location());
 
     match name.as_str() {
-        "with_fx" => Token::Keyword {
+        "with" => Token::Keyword {
             keyword: Keyword::With,
             span,
         },
@@ -108,10 +142,7 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
         },
         "true" => Token::Bool { value: true, span },
         "false" => Token::Bool { value: false, span },
-        _ => Token::Identifier {
-            name: rodeo.get_or_intern(name),
-            span,
-        },
+        _ => Token::Identifier(Identifier::new(rodeo.get_or_intern(name), span)),
     }
 }
 
@@ -175,7 +206,7 @@ mod tests {
     use crate::lang::{
         location::{Location, Span},
         scan::{scan, ScanError},
-        token::{Keyword, Punctuation, Token},
+        token::{Identifier, Keyword, Punctuation, Token},
     };
 
     #[test]
@@ -275,10 +306,10 @@ mod tests {
         );
         assert_eq!(
             cursor.next(),
-            Token::Identifier {
-                name: rodeo.get_or_intern("time"),
-                span: Span::new(Location::new(1, 5, 5), Location::new(1, 9, 9))
-            },
+            Token::Identifier(Identifier::new(
+                rodeo.get_or_intern("time"),
+                Span::new(Location::new(1, 5, 5), Location::new(1, 9, 9))
+            ))
         );
         assert_eq!(
             cursor.next(),

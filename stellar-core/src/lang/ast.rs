@@ -1,13 +1,23 @@
-use lasso::Spur;
-
 use crate::lang::location::Span;
 
-use super::location::Spanned;
+use super::{location::Spanned, token::Identifier};
+
+#[derive(Debug, PartialEq)]
+pub struct Property {
+    pub name: Identifier,
+    pub value: Expression
+}
+
+impl Spanned for Property {
+    fn span(&self) -> Span {
+        Span::new(self.name.span().start(), self.value.span().end())
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
-    Sequence { name: Name, block: Block },
-    With { block: Block },
+    Sequence { name: Identifier, block: Block },
+    With { properties: Vec<Property>, block: Block },
     Expression(Expression)
 }
 
@@ -100,11 +110,5 @@ impl Spanned for BinaryOperator {
 #[derive(Debug, PartialEq)]
 pub struct Block {
     pub statements: Vec<Statement>,
-    pub span: Span,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Name {
-    pub name: Spur,
     pub span: Span,
 }
