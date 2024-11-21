@@ -18,6 +18,21 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
     Ok(statements)
 }
 
+fn force_next_punctuation(
+    cursor: &mut TokenStreamCursor,
+    punctuation: Punctuation,
+) -> Result<Token, ParseError> {
+    let got = cursor.next();
+    if got.is_punctuation(punctuation) {
+        return Err(ParseError::ExpectedPunctuation {
+            expected: punctuation,
+            got,
+        });
+    }
+
+    Ok(got)
+}
+
 fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
     if !cursor.peek().is_punctuation(Punctuation::LeftBrace) {
         return Err(ParseError::ExpectedPunctuation {
@@ -50,15 +65,9 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
 
 fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
     match cursor.peek() {
-        Token::Keyword {
-            keyword: Keyword::Sequence,
-            ..
-        } => parse_sequence_statement(cursor),
-        Token::Keyword {
-            keyword: Keyword::With,
-            ..
-        } => parse_with_statement(cursor),
-        token => Err(ParseError::ExpectedStatement { token }),
+        token if token.is_keyword(Keyword::Sequence) => parse_sequence_statement(cursor),
+        token if token.is_keyword(Keyword::With) => parse_with_statement(cursor),
+        _ => parse_expression(cursor, 0).map(|e| Statement::Expression(e)),
     }
 }
 
@@ -70,16 +79,63 @@ fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, Par
     Ok(Statement::With { block })
 }
 
-fn parse_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
+fn parse_expression(
+    cursor: &mut TokenStreamCursor,
+    precedence: usize,
+) -> Result<Expression, ParseError> {
+    let mut left = parse_prefix_expression(cursor)?;
+
+    while let Some(operator) = cursor.peek().into_binary_operator() {
+        let operator_precedence = operator.precedence();
+
+        if operator_precedence < precedence {
+            break;
+        }
+
+        let right = parse_expression(cursor, operator_precedence + 1)?;
+        left = Expression::Binary {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        };
+    }
+
+    Ok(left)
+}
+
+fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
     match cursor.peek() {
         Token::Integer { value, span } => {
             cursor.next();
 
             Ok(Expression::Integer { value, span })
         }
-        _ => Err(ParseError::ExpectedExpression {
-            token: cursor.peek(),
-        }),
+        Token::Float { value, span } => {
+            cursor.next();
+
+            Ok(Expression::Float { value, span })
+        }
+        token if token.is_punctuation(Punctuation::LeftParen) => {
+            cursor.next(); // '('
+
+            let expression = parse_expression(cursor, 0)?;
+
+            force_next_punctuation(cursor, Punctuation::RightParen)?; // ')'
+
+            Ok(expression)
+        }
+        token => {
+            let Some(prefix_operator) = token.into_prefix_operator() else {
+                return Err(ParseError::ExpectedExpression { token });
+            };
+
+            let operand = parse_expression(cursor, usize::MAX)?;
+
+            Ok(Expression::Prefix {
+                operator: prefix_operator,
+                operand: Box::new(operand),
+            })
+        }
     }
 }
 
@@ -105,7 +161,6 @@ fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement,
 pub enum ParseError {
     InvalidTokenStream,
     ExpectedExpression { token: Token },
-    ExpectedStatement { token: Token },
     ExpectedIdentifier { token: Token },
     ExpectedPunctuation { expected: Punctuation, got: Token },
 }
@@ -146,24 +201,9 @@ mod tests {
                 },
                 block: Block {
                     statements: Vec::new(),
-                    span: Span::new(Location:: new(1, 14, 14), Location::new(1, 16, 16))
+                    span: Span::new(Location::new(1, 14, 14), Location::new(1, 16, 16))
                 }
             }
         );
     }
 }
-
-// sequence test {
-//    with synth: piano { Cmaj7.play }
-// }
-//
-// loop {
-//      with synth: paino2, speed: 1.4, channel: 0 {
-//           test.play
-//      }
-// 
-//      # Plays this note parallel to test sequence 
-//      with channel: 1 {
-//          Cmaj4.play
-//      }
-// }

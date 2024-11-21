@@ -2,6 +2,8 @@ use lasso::Spur;
 
 use crate::lang::location::{Location, Span, Spanned};
 
+use super::ast::{BinaryOperator, BinaryOperatorKind, PrefixOperator, PrefixOperatorKind};
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
     With,
@@ -11,15 +13,35 @@ pub enum Keyword {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Punctuation {
+    Exclamation,
     LeftBrace,
     RightBrace,
     LeftBracket,
     RightBracket,
+    LeftParen,
+    RightParen,
     Plus,
     Minus,
     PlusEq,
     MinusEq,
     Dot,
+}
+
+impl Punctuation {
+    pub fn into_binary_operator_kind(&self) -> Option<BinaryOperatorKind> {
+        match self {
+            Self::Plus => Some(BinaryOperatorKind::Plus),
+            Self::Minus => Some(BinaryOperatorKind::Minus),
+            _ => None,
+        }
+    }
+
+    pub fn into_prefix_operator_kind(&self) -> Option<PrefixOperatorKind> {
+        match self {
+            Self::Exclamation => Some(PrefixOperatorKind::Exclamation),
+            _ => None
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -44,6 +66,10 @@ pub enum Token {
         value: i64,
         span: Span,
     },
+    Bool {
+        value: bool,
+        span: Span,
+    },
     EOF {
         /// Location of the last byte in the source file.
         location: Location,
@@ -55,6 +81,16 @@ impl Token {
         matches!(self, Self::EOF { .. })
     }
 
+    pub fn is_keyword(&self, keyword: Keyword) -> bool {
+        match self {
+            Self::Keyword {
+                keyword: my_keyword,
+                ..
+            } => keyword == *my_keyword,
+            _ => false,
+        }
+    }
+
     pub fn is_punctuation(&self, punctuation: Punctuation) -> bool {
         match self {
             Self::Punctuation {
@@ -62,6 +98,28 @@ impl Token {
                 ..
             } => punctuation == *my_punctuation,
             _ => false,
+        }
+    }
+
+    pub fn into_binary_operator(&self) -> Option<BinaryOperator> {
+        match self {
+            Self::Punctuation { punctuation, span } => {
+                let kind = punctuation.into_binary_operator_kind()?;
+
+                Some(BinaryOperator { kind, span: *span })
+            }
+            _ => None,
+        }
+    }
+
+    pub fn into_prefix_operator(&self) -> Option<PrefixOperator> {
+        match self {
+            Self::Punctuation { punctuation, span } => {
+                let kind = punctuation.into_prefix_operator_kind()?;
+
+                Some(PrefixOperator { kind, span: *span })
+            }
+            _ => None,
         }
     }
 
@@ -81,7 +139,8 @@ impl Spanned for Token {
             | Self::Punctuation { span, .. }
             | Self::Keyword { span, .. }
             | Self::Integer { span, .. }
-            | Self::Float { span, .. } => *span,
+            | Self::Float { span, .. }
+            | Self::Bool { span, .. } => *span,
         }
     }
 }

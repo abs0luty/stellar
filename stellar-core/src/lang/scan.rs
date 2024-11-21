@@ -57,6 +57,8 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
             '}' => single_char_punctuation!(Punctuation::RightBrace),
             '[' => single_char_punctuation!(Punctuation::LeftBracket),
             ']' => single_char_punctuation!(Punctuation::RightBracket),
+            '(' => single_char_punctuation!(Punctuation::LeftParen),
+            ')' => single_char_punctuation!(Punctuation::RightParen),
             _ => {
                 let start = cursor.location();
                 cursor.next();
@@ -92,7 +94,7 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
     let span = Span::new(start, cursor.location());
 
     match name.as_str() {
-        "with" => Token::Keyword {
+        "with_fx" => Token::Keyword {
             keyword: Keyword::With,
             span,
         },
@@ -104,6 +106,8 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
             keyword: Keyword::Sequence,
             span,
         },
+        "true" => Token::Bool { value: true, span },
+        "false" => Token::Bool { value: false, span },
         _ => Token::Identifier {
             name: rodeo.get_or_intern(name),
             span,
@@ -257,7 +261,10 @@ mod tests {
     #[test]
     fn test_identifier_and_keyword() {
         let mut rodeo = Rodeo::new();
-        let mut cursor = scan("wait time", &mut rodeo).unwrap().into_cursor().unwrap();
+        let mut cursor = scan("wait time", &mut rodeo)
+            .unwrap()
+            .into_cursor()
+            .unwrap();
 
         assert_eq!(
             cursor.next(),
