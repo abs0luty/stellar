@@ -1,6 +1,6 @@
 use lasso::Spur;
 
-use crate::location::Span;
+use crate::lang::location::Span;
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {

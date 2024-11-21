@@ -1,6 +1,6 @@
 use lasso::Rodeo;
 
-use crate::{
+use crate::lang::{
     cursor::Cursor,
     location::{Span, Spanned},
     token::{Keyword, Punctuation, Token, TokenStream},
@@ -96,10 +96,13 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
             keyword: Keyword::WithFx,
             span,
         },
-        "with_channel" => Token::Keyword {
-            keyword: Keyword::WithChannel,
-            span,
-        },
+        "with_channel" => {
+            dbg!("with_channel found");
+            Token::Keyword {
+                keyword: Keyword::WithChannel,
+                span,
+            }
+        }
         "with_synth" => Token::Keyword {
             keyword: Keyword::WithSynth,
             span,
@@ -137,14 +140,14 @@ fn scan_number_or_dot(cursor: &mut Cursor) -> Token {
 
     let end = cursor.location();
 
-    if end.index - start.index == 1 && has_dot {
+    if end.index() - start.index() == 1 && has_dot {
         return Token::Punctuation {
             punctuation: Punctuation::Dot,
             span: Span::new(start, end),
         };
     }
 
-    let lexeme = &cursor.source()[(start.index as usize)..(end.index as usize)];
+    let lexeme = &cursor.source()[(start.index() as usize)..(end.index() as usize)];
 
     if has_dot {
         Token::Float {
@@ -176,7 +179,7 @@ impl Spanned for ScanError {
 mod tests {
     use lasso::Rodeo;
 
-    use crate::{
+    use crate::lang::{
         location::{Location, Span},
         scan::{scan, ScanError},
         token::{Keyword, Punctuation, Token},
@@ -185,7 +188,7 @@ mod tests {
     #[test]
     fn test_eof() {
         let mut rodeo = Rodeo::new();
-        let mut cursor = scan("", &mut rodeo).unwrap().cursor();
+        let mut cursor = scan("", &mut rodeo).unwrap().into_cursor().unwrap();
 
         assert_eq!(
             cursor.next(),
@@ -211,7 +214,7 @@ mod tests {
     #[test]
     fn test_punctuation() {
         let mut rodeo = Rodeo::new();
-        let mut cursor = scan("{", &mut rodeo).unwrap().cursor();
+        let mut cursor = scan("{", &mut rodeo).unwrap().into_cursor().unwrap();
 
         assert_eq!(
             cursor.next(),
@@ -231,7 +234,7 @@ mod tests {
     #[test]
     fn test_number_and_dot() {
         let mut rodeo = Rodeo::new();
-        let mut cursor = scan("3 3.2.", &mut rodeo).unwrap().cursor();
+        let mut cursor = scan("3 3.2.", &mut rodeo).unwrap().into_cursor().unwrap();
 
         assert_eq!(
             cursor.next(),
@@ -265,7 +268,7 @@ mod tests {
     #[test]
     fn test_identifier_and_keyword() {
         let mut rodeo = Rodeo::new();
-        let mut cursor = scan("wait time", &mut rodeo).unwrap().cursor();
+        let mut cursor = scan("wait time", &mut rodeo).unwrap().into_cursor().unwrap();
 
         assert_eq!(
             cursor.next(),

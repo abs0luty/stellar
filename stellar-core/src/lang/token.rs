@@ -1,6 +1,6 @@
 use lasso::Spur;
 
-use crate::location::{Location, Span, Spanned};
+use crate::lang::location::{Location, Span, Spanned};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
@@ -77,7 +77,7 @@ impl Spanned for Token {
         match self {
             Self::EOF { location } => Span::new(
                 *location,
-                Location::new(location.line, location.column + 1, location.index + 1),
+                Location::new(location.line(), location.column() + 1, location.index() + 1),
             ),
             Self::Identifier { span, .. }
             | Self::Punctuation { span, .. }
@@ -92,14 +92,18 @@ impl Spanned for Token {
 pub struct TokenStream(Vec<Token>);
 
 impl TokenStream {
+    /// Creates a new empty token stream.
     pub fn new() -> Self {
         Self(Vec::new())
     }
 
+    /// Appends a token to the stream.
     pub fn push(&mut self, token: Token) {
         self.0.push(token);
     }
 
+    /// Returns token with a specified index in the stream. In case index
+    /// is out of bounds, EOF token (end of file) is returned.
     pub fn get(&self, index: usize) -> Token {
         if index > self.0.len() {
             self.0.last().copied().unwrap_or(Token::EOF {
@@ -110,8 +114,14 @@ impl TokenStream {
         }
     }
 
-    pub fn cursor(self) -> TokenStreamCursor {
-        TokenStreamCursor::new(self)
+    /// Returns a cursor over the token stream. See [`TokenStreamCursor`] for more details.
+    pub fn into_cursor(self) -> Option<TokenStreamCursor> {
+        // Ensure last token is EOF.
+        if self.0.last().map_or(true, |maybe_eof| !maybe_eof.is_eof()) {
+            return None;
+        }
+
+        Some(TokenStreamCursor::new(self))
     }
 }
 
@@ -128,6 +138,9 @@ impl TokenStreamCursor {
         }
     }
 
+    /// Returns a new token in the token stream and advances the cursor
+    /// position to the next one. In case, no new tokens are present, EOF
+    /// token (End Of File) is returned.
     pub fn next(&mut self) -> Token {
         self.location += 1;
 

@@ -1,11 +1,12 @@
-use crate::{
+use crate::lang::{
     ast::{Block, Expression, Name, Statement},
     location::{Span, Spanned},
     token::{Keyword, Punctuation, Token, TokenStream, TokenStreamCursor},
 };
 
+/// Parses a given token stream into Abstract Syntax Tree (AST).
 pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
-    let mut cursor = stream.cursor();
+    let mut cursor = stream.into_cursor().expect("Invalid token stream");
     let mut statements = Vec::new();
 
     while !cursor.peek().is_eof() {
@@ -16,10 +17,24 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
 }
 
 fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
+    if !cursor.peek().is_punctuation(Punctuation::LeftBrace) {
+        return Err(ParseError::ExpectedPunctuation {
+            expected: Punctuation::LeftBrace,
+            got: cursor.peek(),
+        });
+    }
+
     let start = cursor.next().span().start(); // '{'
     let mut statements = Vec::new();
 
     while !cursor.peek().is_punctuation(Punctuation::RightBrace) {
+        if cursor.peek().is_eof() {
+            return Err(ParseError::ExpectedPunctuation {
+                expected: Punctuation::RightBrace,
+                got: cursor.peek(),
+            });
+        }
+
         statements.push(parse_statement(cursor)?);
     }
 
@@ -46,7 +61,7 @@ fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseErr
 }
 
 fn parse_with_channel_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
-    let start = cursor.next().span().start(); // 'with_channel'
+    cursor.next(); // 'with_channel'
 
     let channel = parse_expression(cursor)?;
     let block = parse_block(cursor)?;
@@ -55,7 +70,16 @@ fn parse_with_channel_statement(cursor: &mut TokenStreamCursor) -> Result<Statem
 }
 
 fn parse_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
-    todo!()
+    match cursor.peek() {
+        Token::Integer { value, span } => {
+            cursor.next();
+
+            Ok(Expression::Integer { value, span })
+        }
+        _ => Err(ParseError::ExpectedExpression {
+            token: cursor.peek(),
+        }),
+    }
 }
 
 fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
@@ -74,7 +98,8 @@ fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement,
 }
 
 #[derive(Debug)]
-enum ParseError {
+pub enum ParseError {
+    ExpectedExpression { token: Token },
     ExpectedStatement { token: Token },
     ExpectedIdentifier { token: Token },
     ExpectedPunctuation { expected: Punctuation, got: Token },
@@ -84,13 +109,22 @@ enum ParseError {
 mod tests {
     use lasso::Rodeo;
 
-    use crate::{
+    use crate::lang::{
         ast::{Name, Statement},
         location::{Location, Span},
         scan::scan,
     };
 
     use super::parse;
+
+    #[test]
+    fn test_empty() {
+        let mut rodeo = Rodeo::new();
+        let token_stream = scan("", &mut rodeo).unwrap();
+        let statements = parse(token_stream).unwrap();
+
+        assert!(statements.is_empty());
+    }
 
     #[test]
     fn test_sequence() {

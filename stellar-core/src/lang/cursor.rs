@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::Chars};
 
-use crate::location::Location;
+use crate::lang::location::Location;
 
 pub struct Cursor<'a> {
     source: &'a str,
@@ -31,14 +31,19 @@ impl<'a> Cursor<'a> {
 
     pub fn next(&mut self) -> Option<char> {
         if let Some(&next_char) = self.input.peek() {
-            if next_char == '\n' {
-                self.location.line += 1;
-                self.location.column = 0;
+            self.location = if next_char == '\n' {
+                Location::new(
+                    self.location.line() + 1,
+                    0,
+                    self.location.index() + next_char.len_utf8() as u32,
+                )
             } else {
-                self.location.column += 1;
-            }
-
-            self.location.index += next_char.len_utf8() as u32;
+                Location::new(
+                    self.location.line(),
+                    self.location.column() + 1,
+                    self.location.index() + next_char.len_utf8() as u32,
+                )
+            };
         }
 
         return self.input.next();
