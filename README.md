@@ -1,6 +1,12 @@
-# Stellar 🎵
-
-Stellar is a music programming language designed to help you create, play, and experiment with music effortlessly. Whether you're a beginner or an experienced coder, Stellar makes music programming fun and intuitive!
+<table>
+<tr>
+<td width="30%" valign="top">
+<img src="./stellar.png" width="80%">
+</td>
+<td valign="top">
+<b>Stellar</b> is a music programming language designed to help you create, play, and experiment with music effortlessly. Whether you're a beginner or an experienced coder, Stellar makes music programming fun and intuitive!
+</td>
+</table>
 
 ## 🚀 Installation
 
