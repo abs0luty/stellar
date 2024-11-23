@@ -9,7 +9,7 @@ use super::{
     token::{Identifier, Operator},
 };
 
-/// Parses a given token stream into Abstract Syntax Tree (AST).
+/// Processes a given token stream and converts into an Abstract Syntax Tree.
 pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
     let Some(mut cursor) = stream.into_cursor() else {
         return Err(ParseError::InvalidTokenStream);
@@ -76,51 +76,17 @@ fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseErr
     }
 }
 
-fn parse_property(cursor: &mut TokenStreamCursor) -> Result<Property, ParseError> {
-    let name = parse_identifier(cursor)?; // name
-    parse_punctuator(cursor, Punctuator::Colon)?; // ':'
-
-    let value = parse_expression(cursor, 0)?;
-
-    Ok(Property { name, value })
-}
-
-fn parse_let_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
-    cursor.next(); // 'let'
-
-    let name = parse_identifier(cursor)?;
-
-    skip_end_of_lines(cursor);
-    parse_operator(cursor, Operator::Assign)?;
-    skip_end_of_lines(cursor);
-
-    let value = parse_expression(cursor, 0)?;
-
-    Ok(Statement::Let { name, value })
-}
-
-fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
-    cursor.next(); // 'with'
-
-    let mut properties = Vec::new();
-
-    properties.push(parse_property(cursor)?);
-
-    while cursor.peek().is_punctuator(Punctuator::Comma) {
-        cursor.next();
-
-        if cursor.peek().is_punctuator(Punctuator::LeftBrace) {
-            break; // with a: test, b: 3, { } - still counts
-        }
-
-        properties.push(parse_property(cursor)?)
-    }
-
-    let block = parse_block(cursor)?;
-
-    Ok(Statement::With { properties, block })
-}
-
+/// Parses a next expression in a token stream, taking operator precedence into account:
+/// - If `precedence == 0`, binary operators are considered and parsed according to their precedence levels:
+///   ```
+///   3 + 2 * 4
+///   ^^^^^^^^^------ parse_expression(cursor, 0)
+///   ```
+/// - If `precedence == usize::MAX`, only the first prefix expression is parsed, and binary operators are ignored.
+///   ```
+///   3 + 2 * 4
+///   ^-------------- parse_expression(cursor, usize::MAX)
+///   ```
 fn parse_expression(
     cursor: &mut TokenStreamCursor,
     precedence: usize,
@@ -161,13 +127,19 @@ fn parse_expression(
     Ok(left)
 }
 
+/// Parses a left hand side of the potential binary expression, i.e:
+/// - 3         (literal)
+/// - a         (name)
+/// - (2 + 3)   (parenthesized)
+/// - [a, b, c] (list)
+/// - ...       (any value expression)
+/// - !true     (expression with a prefix op)
 fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
     match cursor.next() {
         Token::Integer { value, span } => Ok(Expression::Integer { value, span }),
         Token::Float { value, span } => Ok(Expression::Float { value, span }),
         Token::Identifier(identifier) => Ok(Expression::Identifier(identifier)),
         token if token.is_keyword(Keyword::LoadSample) => {
-            dbg!("Detected load_sample");
             let sample = parse_expression(cursor, 0)?;
 
             Ok(Expression::LoadSample {
@@ -243,6 +215,56 @@ fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement,
     Ok(Statement::Sequence { name, block })
 }
 
+fn parse_let_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
+    cursor.next(); // 'let'
+
+    let name = parse_identifier(cursor)?;
+
+    skip_end_of_lines(cursor);
+    parse_operator(cursor, Operator::Assign)?;
+    skip_end_of_lines(cursor);
+
+    let value = parse_expression(cursor, 0)?;
+
+    Ok(Statement::Let { name, value })
+}
+
+fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
+    cursor.next(); // 'with' keyword
+
+    // <property> ::= <name> ':' <value>
+    fn parse_property(cursor: &mut TokenStreamCursor) -> Result<Property, ParseError> {
+        let name = parse_identifier(cursor)?;
+        parse_punctuator(cursor, Punctuator::Colon)?;
+
+        let value = parse_expression(cursor, 0)?;
+
+        Ok(Property { name, value })
+    }
+
+    let mut properties = Vec::new();
+    properties.push(parse_property(cursor)?);
+
+    while cursor.peek().is_punctuator(Punctuator::Comma) {
+        cursor.next();
+
+        if cursor.peek().is_punctuator(Punctuator::LeftBrace) {
+            break; // with a: test, b: 3, { } - still counts
+        }
+
+        properties.push(parse_property(cursor)?)
+    }
+
+    let block = parse_block(cursor)?;
+
+    Ok(Statement::With { properties, block })
+}
+
+/// Checks if the next token in cursor is an identifier:
+/// - If it is, returns an [`Identifier`] object.
+/// - If it is not, returns a [`ParseError`].
+///
+/// In both cases, cursor is moved to the next token.
 fn parse_identifier(cursor: &mut TokenStreamCursor) -> Result<Identifier, ParseError> {
     let got = cursor.next();
     let Token::Identifier(identifier) = got else {
@@ -252,14 +274,19 @@ fn parse_identifier(cursor: &mut TokenStreamCursor) -> Result<Identifier, ParseE
     Ok(identifier)
 }
 
+/// Checks if the next token in cursor is a punctuator given in a function argument `punctuator`:
+/// - If it is, returns a [`Token`] object.
+/// - If it is not, returns a [`ParseError`].
+///
+/// In both cases, cursor is moved to the next token.
 fn parse_punctuator(
     cursor: &mut TokenStreamCursor,
-    punctuation: Punctuator,
+    punctuator: Punctuator,
 ) -> Result<Token, ParseError> {
     let got = cursor.next();
-    if !got.is_punctuator(punctuation) {
+    if !got.is_punctuator(punctuator) {
         return Err(ParseError::ExpectedPunctuation {
-            expected: punctuation,
+            expected: punctuator,
             got,
         });
     }
@@ -267,6 +294,11 @@ fn parse_punctuator(
     Ok(got)
 }
 
+/// Checks if the next token in cursor is an operator given in a function argument `operator`:
+/// - If it is, returns a [`Token`] object.
+/// - If it is not, returns a [`ParseError`].
+///
+/// In both cases, cursor is moved to the next token.
 fn parse_operator(cursor: &mut TokenStreamCursor, operator: Operator) -> Result<Token, ParseError> {
     let got = cursor.next();
     if !got.is_operator(operator) {
@@ -279,6 +311,7 @@ fn parse_operator(cursor: &mut TokenStreamCursor, operator: Operator) -> Result<
     Ok(got)
 }
 
+/// Moves cursor to the next non-EOL token.
 fn skip_end_of_lines(cursor: &mut TokenStreamCursor) {
     while cursor.peek().is_end_of_line() {
         cursor.next();
