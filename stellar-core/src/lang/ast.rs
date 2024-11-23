@@ -56,6 +56,10 @@ pub enum Expression {
         operator: PrefixOperator,
         operand: Box<Expression>,
     },
+    List {
+        expressions: Vec<Expression>,
+        span: Span,
+    },
     Identifier(Identifier),
 }
 
@@ -66,9 +70,10 @@ impl Spanned for Expression {
             Self::Prefix { operator, operand } => {
                 Span::new(operator.span().start(), operand.span().end())
             }
-            Self::Bool { span, .. } | Self::Float { span, .. } | Self::Integer { span, .. } => {
-                *span
-            }
+            Self::List { span, .. }
+            | Self::Bool { span, .. }
+            | Self::Float { span, .. }
+            | Self::Integer { span, .. } => *span,
             Self::Identifier(identifier) => identifier.span(),
         }
     }

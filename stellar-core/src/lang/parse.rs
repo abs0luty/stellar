@@ -14,7 +14,7 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
     let mut statements = Vec::new();
 
     loop {
-        skip_eols(&mut cursor);
+        skip_end_of_lines(&mut cursor);
 
         if cursor.peek().is_eof() {
             break;
@@ -33,7 +33,7 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
     let mut statements = Vec::new();
 
     loop {
-        skip_eols(cursor);
+        skip_end_of_lines(cursor);
 
         if cursor.peek().is_punctuation(Punctuation::RightBrace) {
             break;
@@ -108,7 +108,7 @@ fn parse_expression(
 
         // 1 |  3 +
         // 2 |  2 # Expression is continued on the new line
-        skip_eols(cursor);
+        skip_end_of_lines(cursor);
 
         let right = parse_expression(cursor, operator_precedence + 1)?;
         left = Expression::Binary {
@@ -122,30 +122,46 @@ fn parse_expression(
 }
 
 fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
-    match cursor.peek() {
-        Token::Integer { value, span } => {
-            cursor.next();
-
-            Ok(Expression::Integer { value, span })
-        }
-        Token::Float { value, span } => {
-            cursor.next();
-
-            Ok(Expression::Float { value, span })
-        }
-        Token::Identifier(identifier) => {
-            cursor.next();
-
-            Ok(Expression::Identifier(identifier))
-        }
+    match cursor.next() {
+        Token::Integer { value, span } => Ok(Expression::Integer { value, span }),
+        Token::Float { value, span } => Ok(Expression::Float { value, span }),
+        Token::Identifier(identifier) => Ok(Expression::Identifier(identifier)),
         token if token.is_punctuation(Punctuation::LeftParen) => {
-            cursor.next(); // '('
-
             let expression = parse_expression(cursor, 0)?;
 
             parse_punctuation(cursor, Punctuation::RightParen)?; // ')'
 
             Ok(expression)
+        }
+        token if token.is_punctuation(Punctuation::LeftBracket) => {
+            let mut expressions = Vec::new();
+
+            skip_end_of_lines(cursor);
+
+            if !cursor.peek().is_punctuation(Punctuation::RightBracket) {
+                expressions.push(parse_expression(cursor, 0)?);
+
+                skip_end_of_lines(cursor);
+
+                while cursor.peek().is_punctuation(Punctuation::Comma) {
+                    cursor.next();
+
+                    skip_end_of_lines(cursor);
+
+                    if cursor.peek().is_punctuation(Punctuation::RightBracket) {
+                        break; // [a, b,] - still counts
+                    }
+
+                    expressions.push(parse_expression(cursor, 0)?)
+                }
+            }
+
+            let end = cursor.next().span().end();
+
+            Ok(Expression::List {
+                expressions,
+                span: Span::new(token.span().start(), end),
+            })
         }
         token => {
             let Some(prefix_operator) = token.into_prefix_operator() else {
@@ -211,7 +227,7 @@ fn parse_punctuation(
     Ok(got)
 }
 
-fn skip_eols(cursor: &mut TokenStreamCursor) {
+fn skip_end_of_lines(cursor: &mut TokenStreamCursor) {
     while cursor.peek().is_eol() {
         cursor.next();
     }
@@ -256,6 +272,13 @@ mod tests {
             "a +
 2 * (3 + b) - 3"
         ),
-        (play_and_wait, "play c4 wait 1")
+        (play_and_wait, "play c4 wait 1"),
+        (list, "[1, 2] [1,
+2]
+[
+1, 
+2]
+[1,
+2,]")
     );
 }
