@@ -86,7 +86,7 @@ pub enum BinaryOperatorKind {
 impl BinaryOperatorKind {
     pub fn precedence(&self) -> usize {
         match self {
-            Self::Plus | Self::Minus => 0,
+            Self::Plus | Self::Minus => 1,
         }
     }
 }

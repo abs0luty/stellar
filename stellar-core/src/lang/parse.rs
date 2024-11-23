@@ -102,6 +102,8 @@ fn parse_expression(
             break;
         }
 
+        cursor.next();
+
         let right = parse_expression(cursor, operator_precedence + 1)?;
         left = Expression::Binary {
             left: Box::new(left),
