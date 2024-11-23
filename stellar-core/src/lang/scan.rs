@@ -67,7 +67,9 @@ macro_rules! match_punctuation {
 /// Scans the next token in the source text and advances position of the [`Cursor`].
 fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, ScanError> {
     // Skipping whitespace characters
-    while cursor.peek().is_some_and(|c| c.is_whitespace()) {
+    while cursor.peek().is_some_and(
+        |c| c.is_whitespace() && c != '\n', // Line breaks are counted.
+    ) {
         cursor.next();
     }
 
@@ -78,6 +80,14 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
     };
 
     match c {
+        '\n' => {
+            let location = cursor.location();
+            cursor.next();
+
+            Ok(Token::EOL {
+                span: Span::new(location, cursor.location()),
+            })
+        }
         c if c.is_alphabetic() || c == '_' => Ok(scan_name(cursor, rodeo)),
         c if c.is_numeric() || c == '.' => Ok(scan_number_or_dot(cursor)),
         _ => {

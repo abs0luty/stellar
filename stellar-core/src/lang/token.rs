@@ -41,7 +41,7 @@ impl Punctuation {
     pub fn into_prefix_operator_kind(&self) -> Option<PrefixOperatorKind> {
         match self {
             Self::Exclamation => Some(PrefixOperatorKind::Exclamation),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -89,6 +89,9 @@ pub enum Token {
     },
     Bool {
         value: bool,
+        span: Span,
+    },
+    EOL {
         span: Span,
     },
     EOF {
@@ -161,7 +164,8 @@ impl Spanned for Token {
             | Self::Keyword { span, .. }
             | Self::Integer { span, .. }
             | Self::Float { span, .. }
-            | Self::Bool { span, .. } => *span,
+            | Self::Bool { span, .. }
+            | Self::EOL { span } => *span,
         }
     }
 }
@@ -181,8 +185,8 @@ impl TokenStream {
     }
 
     /// Returns token with a specified index in the stream. In case index
-    /// is out of bounds, EOF token (end of file) is returned.
-    pub fn get(&self, index: usize) -> Token {
+    /// is out of bounds, EOF token (End Of File) is returned.
+    fn get(&self, index: usize) -> Token {
         if index > self.0.len() {
             self.0.last().copied().unwrap_or(Token::EOF {
                 location: Location::sof(),
@@ -203,29 +207,49 @@ impl TokenStream {
     }
 }
 
+/// A cursor for navigating through a stream of tokens.
+///
+/// This struct provides functionality to sequentially traverse
+/// a [`TokenStream`], allowing you to retrieve tokens one at a time
+/// or peek at the upcoming token without advancing the cursor.
+/// It tracks the current position in the stream and ensures
+/// that an **EOF (End Of File) token is returned when no more
+/// tokens are available**.
 pub struct TokenStreamCursor {
     stream: TokenStream,
     location: usize,
 }
 
 impl TokenStreamCursor {
-    pub fn new(stream: TokenStream) -> Self {
+    fn new(stream: TokenStream) -> Self {
         Self {
             stream,
             location: 0,
         }
     }
 
-    /// Returns a new token in the token stream and advances the cursor
-    /// position to the next one. In case, no new tokens are present, EOF
-    /// token (End Of File) is returned.
+    /// Retrieves the next token from the stream, advancing the cursor
+    /// to the subsequent position. If no more tokens are available,
+    /// an EOF (End Of File) token is returned.
     pub fn next(&mut self) -> Token {
         self.location += 1;
 
         self.stream.get(self.location - 1)
     }
 
+    /// Provides a glimpse of the next token without advancing the cursor
+    /// (compared to [`TokenStreamCursor::next`]). If no more tokens are 
+    /// available, an EOF (End Of File) token is returned.
     pub fn peek(&mut self) -> Token {
         self.stream.get(self.location)
+    }
+}
+
+impl IntoIterator for TokenStream {
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type Item = Token;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
