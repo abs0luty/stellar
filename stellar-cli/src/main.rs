@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
 mod scan;
+mod parse;
 
 #[derive(Parser)]
 #[command(name = "Stellar", about = "Programming language for creating music.")]
@@ -15,6 +16,10 @@ enum Command {
         #[arg(value_name = "FILE")]
         filepath: String,
     },
+    Parse {
+        #[arg(value_name = "FILE")]
+        filepath: String,
+    },
 }
 
 fn main() {
@@ -24,5 +29,6 @@ fn main() {
         Command::Scan { filepath } => {
             scan::run(&filepath);
         }
+        Command::Parse { filepath } => parse::run(&filepath),
     }
 }

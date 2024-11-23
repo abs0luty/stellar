@@ -105,6 +105,10 @@ impl Token {
         matches!(self, Self::EOF { .. })
     }
 
+    pub fn is_eol(&self) -> bool {
+        matches!(self, Self::EOL { .. })
+    }
+
     pub fn is_keyword(&self, keyword: Keyword) -> bool {
         match self {
             Self::Keyword {

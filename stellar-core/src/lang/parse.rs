@@ -13,7 +13,13 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
     };
     let mut statements = Vec::new();
 
-    while !cursor.peek().is_eof() {
+    loop {
+        skip_eols(&mut cursor);
+
+        if cursor.peek().is_eof() {
+            break;
+        }
+
         statements.push(parse_statement(&mut cursor)?);
     }
 
@@ -26,7 +32,13 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
         .start(); // '{'
     let mut statements = Vec::new();
 
-    while !cursor.peek().is_punctuation(Punctuation::RightBrace) {
+    loop {
+        skip_eols(cursor);
+
+        if cursor.peek().is_punctuation(Punctuation::RightBrace) {
+            break;
+        }
+
         statements.push(parse_statement(cursor)?);
     }
 
@@ -168,6 +180,12 @@ fn parse_punctuation(
     }
 
     Ok(got)
+}
+
+fn skip_eols(cursor: &mut TokenStreamCursor) {
+    while cursor.peek().is_eol() {
+        cursor.next();
+    }
 }
 
 #[derive(Debug)]
