@@ -1,0 +1,63 @@
+---
+source: stellar-core/src/lang/scan.rs
+expression: "scan(\"3 3.2.\", & mut rodeo)"
+snapshot_kind: text
+---
+Ok(
+    TokenStream(
+        [
+            Integer {
+                value: 3,
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 0,
+                        index: 0,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 1,
+                        index: 1,
+                    },
+                },
+            },
+            Float {
+                value: 3.2,
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 2,
+                        index: 2,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 5,
+                        index: 5,
+                    },
+                },
+            },
+            Punctuation {
+                punctuation: Dot,
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 5,
+                        index: 5,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 6,
+                        index: 6,
+                    },
+                },
+            },
+            EOF {
+                location: Location {
+                    line: 1,
+                    column: 6,
+                    index: 6,
+                },
+            },
+        ],
+    ),
+)

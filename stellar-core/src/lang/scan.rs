@@ -112,6 +112,8 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
                 {
                     '-' => Punctuation::Minus,
                     '+' => Punctuation::Plus,
+                    '*' => Punctuation::Star,
+                    '/' => Punctuation::Slash,
                     '{' => Punctuation::LeftBrace,
                     '}' => Punctuation::RightBrace,
                     '[' => Punctuation::LeftBracket,
@@ -222,121 +224,28 @@ impl Spanned for ScanError {
 
 #[cfg(test)]
 mod tests {
+    use insta::assert_debug_snapshot;
     use lasso::Rodeo;
 
-    use crate::lang::{
-        location::{Location, Span},
-        scan::{scan, ScanError},
-        token::{Identifier, Keyword, Punctuation, Token},
-    };
+    use super::scan;
 
-    #[test]
-    fn test_eof() {
-        let mut rodeo = Rodeo::new();
-        let mut cursor = scan("", &mut rodeo).unwrap().into_cursor().unwrap();
-
-        assert_eq!(
-            cursor.next(),
-            Token::EOF {
-                location: Location::sof()
-            }
-        )
+    macro_rules! test_scan {
+        ($(($name:ident, $source:expr)),* $(,)?) => {
+            $(
+                #[test]
+                fn $name() {
+                    let mut rodeo = Rodeo::new();
+                    assert_debug_snapshot!(scan($source, &mut rodeo));
+                }
+            )*
+        };
     }
 
-    #[test]
-    fn test_unexpected_character() {
-        let mut rodeo = Rodeo::new();
-
-        assert_eq!(
-            scan("!", &mut rodeo),
-            Err(ScanError::UnexpectedCharacter {
-                character: '!',
-                span: Span::new(Location::sof(), Location::new(1, 1, 1))
-            })
-        );
-    }
-
-    #[test]
-    fn test_punctuation() {
-        let mut rodeo = Rodeo::new();
-        let mut cursor = scan("{", &mut rodeo).unwrap().into_cursor().unwrap();
-
-        assert_eq!(
-            cursor.next(),
-            Token::Punctuation {
-                punctuation: Punctuation::LeftBrace,
-                span: Span::new(Location::sof(), Location::new(1, 1, 1))
-            }
-        );
-        assert_eq!(
-            cursor.next(),
-            Token::EOF {
-                location: Location::new(1, 1, 1)
-            }
-        );
-    }
-
-    #[test]
-    fn test_number_and_dot() {
-        let mut rodeo = Rodeo::new();
-        let mut cursor = scan("3 3.2.", &mut rodeo).unwrap().into_cursor().unwrap();
-
-        assert_eq!(
-            cursor.next(),
-            Token::Integer {
-                value: 3,
-                span: Span::new(Location::sof(), Location::new(1, 1, 1))
-            },
-        );
-        assert_eq!(
-            cursor.next(),
-            Token::Float {
-                value: 3.2,
-                span: Span::new(Location::new(1, 2, 2), Location::new(1, 5, 5))
-            },
-        );
-        assert_eq!(
-            cursor.next(),
-            Token::Punctuation {
-                punctuation: Punctuation::Dot,
-                span: Span::new(Location::new(1, 5, 5), Location::new(1, 6, 6))
-            },
-        );
-        assert_eq!(
-            cursor.next(),
-            Token::EOF {
-                location: Location::new(1, 6, 6)
-            }
-        );
-    }
-
-    #[test]
-    fn test_identifier_and_keyword() {
-        let mut rodeo = Rodeo::new();
-        let mut cursor = scan("wait time", &mut rodeo)
-            .unwrap()
-            .into_cursor()
-            .unwrap();
-
-        assert_eq!(
-            cursor.next(),
-            Token::Keyword {
-                keyword: Keyword::Wait,
-                span: Span::new(Location::sof(), Location::new(1, 4, 4))
-            },
-        );
-        assert_eq!(
-            cursor.next(),
-            Token::Identifier(Identifier::new(
-                rodeo.get_or_intern("time"),
-                Span::new(Location::new(1, 5, 5), Location::new(1, 9, 9))
-            ))
-        );
-        assert_eq!(
-            cursor.next(),
-            Token::EOF {
-                location: Location::new(1, 9, 9)
-            }
-        );
-    }
+    test_scan!(
+        (eof, ""),
+        (unexpected_char, "!"),
+        (punctuation, "("),
+        (number_and_dot, "3 3.2."),
+        (name, "wait time"),
+    );
 }

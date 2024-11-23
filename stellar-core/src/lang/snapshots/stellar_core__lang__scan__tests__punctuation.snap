@@ -1,0 +1,33 @@
+---
+source: stellar-core/src/lang/scan.rs
+expression: "scan(\"(\", & mut rodeo)"
+snapshot_kind: text
+---
+Ok(
+    TokenStream(
+        [
+            Punctuation {
+                punctuation: LeftParen,
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 0,
+                        index: 0,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 1,
+                        index: 1,
+                    },
+                },
+            },
+            EOF {
+                location: Location {
+                    line: 1,
+                    column: 1,
+                    index: 1,
+                },
+            },
+        ],
+    ),
+)

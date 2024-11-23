@@ -1,0 +1,158 @@
+---
+source: stellar-core/src/lang/parse.rs
+expression: parse(token_stream)
+snapshot_kind: text
+---
+Ok(
+    [
+        Expression(
+            Binary {
+                operator: BinaryOperator {
+                    kind: Minus,
+                    span: Span {
+                        start: Location {
+                            line: 2,
+                            column: 12,
+                            index: 16,
+                        },
+                        end: Location {
+                            line: 2,
+                            column: 13,
+                            index: 17,
+                        },
+                    },
+                },
+                left: Binary {
+                    operator: BinaryOperator {
+                        kind: Plus,
+                        span: Span {
+                            start: Location {
+                                line: 1,
+                                column: 2,
+                                index: 2,
+                            },
+                            end: Location {
+                                line: 1,
+                                column: 3,
+                                index: 3,
+                            },
+                        },
+                    },
+                    left: Identifier(
+                        Identifier {
+                            name: Spur(1),
+                            span: Span {
+                                start: Location {
+                                    line: 1,
+                                    column: 0,
+                                    index: 0,
+                                },
+                                end: Location {
+                                    line: 1,
+                                    column: 1,
+                                    index: 1,
+                                },
+                            },
+                        },
+                    ),
+                    right: Binary {
+                        operator: BinaryOperator {
+                            kind: Star,
+                            span: Span {
+                                start: Location {
+                                    line: 2,
+                                    column: 2,
+                                    index: 6,
+                                },
+                                end: Location {
+                                    line: 2,
+                                    column: 3,
+                                    index: 7,
+                                },
+                            },
+                        },
+                        left: Integer {
+                            value: 2,
+                            span: Span {
+                                start: Location {
+                                    line: 2,
+                                    column: 0,
+                                    index: 4,
+                                },
+                                end: Location {
+                                    line: 2,
+                                    column: 1,
+                                    index: 5,
+                                },
+                            },
+                        },
+                        right: Binary {
+                            operator: BinaryOperator {
+                                kind: Plus,
+                                span: Span {
+                                    start: Location {
+                                        line: 2,
+                                        column: 7,
+                                        index: 11,
+                                    },
+                                    end: Location {
+                                        line: 2,
+                                        column: 8,
+                                        index: 12,
+                                    },
+                                },
+                            },
+                            left: Integer {
+                                value: 3,
+                                span: Span {
+                                    start: Location {
+                                        line: 2,
+                                        column: 5,
+                                        index: 9,
+                                    },
+                                    end: Location {
+                                        line: 2,
+                                        column: 6,
+                                        index: 10,
+                                    },
+                                },
+                            },
+                            right: Identifier(
+                                Identifier {
+                                    name: Spur(2),
+                                    span: Span {
+                                        start: Location {
+                                            line: 2,
+                                            column: 9,
+                                            index: 13,
+                                        },
+                                        end: Location {
+                                            line: 2,
+                                            column: 10,
+                                            index: 14,
+                                        },
+                                    },
+                                },
+                            ),
+                        },
+                    },
+                },
+                right: Integer {
+                    value: 3,
+                    span: Span {
+                        start: Location {
+                            line: 2,
+                            column: 14,
+                            index: 18,
+                        },
+                        end: Location {
+                            line: 2,
+                            column: 15,
+                            index: 19,
+                        },
+                    },
+                },
+            },
+        ),
+    ],
+)

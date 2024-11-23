@@ -104,8 +104,8 @@ fn parse_expression(
 
         cursor.next();
 
-        // 1 |  3 + 
-        // 2 |  2 # Expression is continued on the new line  
+        // 1 |  3 +
+        // 2 |  2 # Expression is continued on the new line
         skip_eols(cursor);
 
         let right = parse_expression(cursor, operator_precedence + 1)?;
@@ -130,6 +130,11 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
             cursor.next();
 
             Ok(Expression::Float { value, span })
+        }
+        Token::Identifier(identifier) => {
+            cursor.next();
+
+            Ok(Expression::Identifier(identifier))
         }
         token if token.is_punctuation(Punctuation::LeftParen) => {
             cursor.next(); // '('
@@ -204,83 +209,33 @@ pub enum ParseError {
 
 #[cfg(test)]
 mod tests {
+    use insta::assert_debug_snapshot;
     use lasso::Rodeo;
 
-    use crate::lang::{
-        ast::{Block, Expression, Property, Statement},
-        location::{Location, Span},
-        scan::scan,
-        token::Identifier,
-    };
+    use crate::lang::scan::scan;
 
     use super::parse;
 
-    #[test]
-    fn test_empty() {
-        let mut rodeo = Rodeo::new();
-        let token_stream = scan("", &mut rodeo).unwrap();
-        let statements = parse(token_stream).unwrap();
-
-        assert!(statements.is_empty());
-    }
-
-    #[test]
-    fn test_with() {
-        let mut rodeo = Rodeo::new();
-        let token_stream = scan("with a: 3, b: 4, {}", &mut rodeo).unwrap();
-        let statements = parse(token_stream).unwrap();
-
-        assert_eq!(
-            statements.first().unwrap(),
-            &Statement::With {
-                properties: vec![
-                    Property {
-                        name: Identifier::new(
-                            rodeo.get_or_intern("a"),
-                            Span::new(Location::new(1, 5, 5), Location::new(1, 6, 6))
-                        ),
-                        value: Expression::Integer {
-                            value: 3,
-                            span: Span::new(Location::new(1, 8, 8), Location::new(1, 9, 9))
-                        }
-                    },
-                    Property {
-                        name: Identifier::new(
-                            rodeo.get_or_intern("b"),
-                            Span::new(Location::new(1, 11, 11), Location::new(1, 12, 12))
-                        ),
-                        value: Expression::Integer {
-                            value: 4,
-                            span: Span::new(Location::new(1, 14, 14), Location::new(1, 15, 15))
-                        }
-                    }
-                ],
-                block: Block {
-                    statements: vec![],
-                    span: Span::new(Location::new(1, 17, 17), Location::new(1, 19, 19))
+    macro_rules! test_parse {
+        ($(($name:ident, $source:expr)),* $(,)?) => {
+            $(
+                #[test]
+                fn $name() {
+                    let mut rodeo = Rodeo::new();
+                    let token_stream = scan($source, &mut rodeo).expect("Scanning failed");
+                    assert_debug_snapshot!(parse(token_stream));
                 }
-            }
-        );
+            )*
+        };
     }
 
-    #[test]
-    fn test_sequence() {
-        let mut rodeo = Rodeo::new();
-        let token_stream = scan("sequence name {}", &mut rodeo).unwrap();
-        let statements = parse(token_stream).unwrap();
-
-        assert_eq!(
-            statements.first().unwrap(),
-            &Statement::Sequence {
-                name: Identifier::new(
-                    rodeo.get_or_intern("name"),
-                    Span::new(Location::new(1, 9, 9), Location::new(1, 13, 13))
-                ),
-                block: Block {
-                    statements: Vec::new(),
-                    span: Span::new(Location::new(1, 14, 14), Location::new(1, 16, 16))
-                }
-            }
-        );
-    }
+    test_parse!(
+        (empty, ""),
+        (with, "with a: 3, b: 4, {}"),
+        (
+            binary_expr,
+            "a +
+2 * (3 + b) - 3"
+        ),
+    );
 }

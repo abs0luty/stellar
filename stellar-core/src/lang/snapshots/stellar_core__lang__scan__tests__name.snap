@@ -1,0 +1,50 @@
+---
+source: stellar-core/src/lang/scan.rs
+expression: "scan(\"wait time\", & mut rodeo)"
+snapshot_kind: text
+---
+Ok(
+    TokenStream(
+        [
+            Keyword {
+                keyword: Wait,
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 0,
+                        index: 0,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 4,
+                        index: 4,
+                    },
+                },
+            },
+            Identifier(
+                Identifier {
+                    name: Spur(1),
+                    span: Span {
+                        start: Location {
+                            line: 1,
+                            column: 5,
+                            index: 5,
+                        },
+                        end: Location {
+                            line: 1,
+                            column: 9,
+                            index: 9,
+                        },
+                    },
+                },
+            ),
+            EOF {
+                location: Location {
+                    line: 1,
+                    column: 9,
+                    index: 9,
+                },
+            },
+        ],
+    ),
+)

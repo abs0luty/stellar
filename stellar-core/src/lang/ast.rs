@@ -44,6 +44,7 @@ pub enum Expression {
         operator: PrefixOperator,
         operand: Box<Expression>,
     },
+    Identifier(Identifier)
 }
 
 impl Spanned for Expression {
@@ -56,6 +57,7 @@ impl Spanned for Expression {
             Self::Bool { span, .. } | Self::Float { span, .. } | Self::Integer { span, .. } => {
                 *span
             }
+            Self::Identifier(identifier) => identifier.span()
         }
     }
 }
@@ -81,12 +83,15 @@ impl Spanned for PrefixOperator {
 pub enum BinaryOperatorKind {
     Plus,
     Minus,
+    Star,
+    Slash,
 }
 
 impl BinaryOperatorKind {
     pub fn precedence(&self) -> usize {
         match self {
             Self::Plus | Self::Minus => 1,
+            Self::Star | Self::Slash => 2
         }
     }
 }

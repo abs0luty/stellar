@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+insta = "1.41.1"
 lasso = "0.7.3"

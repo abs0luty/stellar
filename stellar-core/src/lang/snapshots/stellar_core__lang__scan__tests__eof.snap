@@ -1,0 +1,18 @@
+---
+source: stellar-core/src/lang/scan.rs
+expression: "scan(\"\", & mut rodeo)"
+snapshot_kind: text
+---
+Ok(
+    TokenStream(
+        [
+            EOF {
+                location: Location {
+                    line: 1,
+                    column: 0,
+                    index: 0,
+                },
+            },
+        ],
+    ),
+)

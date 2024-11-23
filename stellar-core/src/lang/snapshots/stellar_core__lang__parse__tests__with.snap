@@ -1,0 +1,92 @@
+---
+source: stellar-core/src/lang/parse.rs
+expression: parse(token_stream)
+snapshot_kind: text
+---
+Ok(
+    [
+        With {
+            properties: [
+                Property {
+                    name: Identifier {
+                        name: Spur(1),
+                        span: Span {
+                            start: Location {
+                                line: 1,
+                                column: 5,
+                                index: 5,
+                            },
+                            end: Location {
+                                line: 1,
+                                column: 6,
+                                index: 6,
+                            },
+                        },
+                    },
+                    value: Integer {
+                        value: 3,
+                        span: Span {
+                            start: Location {
+                                line: 1,
+                                column: 8,
+                                index: 8,
+                            },
+                            end: Location {
+                                line: 1,
+                                column: 9,
+                                index: 9,
+                            },
+                        },
+                    },
+                },
+                Property {
+                    name: Identifier {
+                        name: Spur(2),
+                        span: Span {
+                            start: Location {
+                                line: 1,
+                                column: 11,
+                                index: 11,
+                            },
+                            end: Location {
+                                line: 1,
+                                column: 12,
+                                index: 12,
+                            },
+                        },
+                    },
+                    value: Integer {
+                        value: 4,
+                        span: Span {
+                            start: Location {
+                                line: 1,
+                                column: 14,
+                                index: 14,
+                            },
+                            end: Location {
+                                line: 1,
+                                column: 15,
+                                index: 15,
+                            },
+                        },
+                    },
+                },
+            ],
+            block: Block {
+                statements: [],
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 17,
+                        index: 17,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 19,
+                        index: 19,
+                    },
+                },
+            },
+        },
+    ],
+)

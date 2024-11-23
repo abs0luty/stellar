@@ -1,0 +1,8 @@
+---
+source: stellar-core/src/lang/parse.rs
+expression: parse(token_stream)
+snapshot_kind: text
+---
+Ok(
+    [],
+)

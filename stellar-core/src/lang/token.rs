@@ -24,6 +24,8 @@ pub enum Punctuation {
     Minus,
     PlusEq,
     MinusEq,
+    Star,
+    Slash,
     Dot,
     Colon,
     Comma,
@@ -34,6 +36,8 @@ impl Punctuation {
         match self {
             Self::Plus => Some(BinaryOperatorKind::Plus),
             Self::Minus => Some(BinaryOperatorKind::Minus),
+            Self::Star => Some(BinaryOperatorKind::Star),
+            Self::Slash => Some(BinaryOperatorKind::Slash),
             _ => None,
         }
     }
