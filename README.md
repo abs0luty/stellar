@@ -1,7 +1,7 @@
-<table>
+<table style="border-collapse: collapse; border: none;">
 <tr>
 <td width="30%" valign="top">
-<img src="./stellar.png" width="80%">
+<img src="./stellar.png" width="50%">
 </td>
 <td valign="top">
 <b>Stellar</b> is a music programming language designed to help you create, play, and experiment with music effortlessly. Whether you're a beginner or an experienced coder, Stellar makes music programming fun and intuitive!
