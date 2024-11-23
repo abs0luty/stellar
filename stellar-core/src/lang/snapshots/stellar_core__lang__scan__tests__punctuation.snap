@@ -7,7 +7,7 @@ Ok(
     TokenStream(
         [
             Punctuator {
-                punctuation: LeftParen,
+                punctuator: LeftParen,
                 span: Span {
                     start: Location {
                         line: 1,

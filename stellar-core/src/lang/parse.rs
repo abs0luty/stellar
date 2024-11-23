@@ -6,7 +6,7 @@ use crate::lang::{
 
 use super::{
     ast::{BinaryOperator, PrefixOperator, Property},
-    token::Identifier,
+    token::{Identifier, Operator},
 };
 
 /// Parses a given token stream into Abstract Syntax Tree (AST).
@@ -30,7 +30,7 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
 }
 
 fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
-    let start = parse_punctuation(cursor, Punctuator::LeftBrace)?
+    let start = parse_punctuator(cursor, Punctuator::LeftBrace)?
         .span()
         .start(); // '{'
     let mut statements = Vec::new();
@@ -38,7 +38,7 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
     loop {
         skip_end_of_lines(cursor);
 
-        if cursor.peek().is_punctuation(Punctuator::RightBrace) {
+        if cursor.peek().is_punctuator(Punctuator::RightBrace) {
             break;
         }
 
@@ -55,21 +55,48 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
 
 fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
     match cursor.peek() {
-        token if token.is_keyword(Keyword::Play) => parse_play_statement(cursor),
-        token if token.is_keyword(Keyword::Wait) => parse_wait_statement(cursor),
+        token if token.is_keyword(Keyword::Play) => {
+            cursor.next(); // 'play' keyword
+
+            Ok(Statement::Play {
+                expression: parse_expression(cursor, 0)?,
+            })
+        }
+        token if token.is_keyword(Keyword::Wait) => {
+            cursor.next(); // 'wait' keyword
+
+            Ok(Statement::Wait {
+                expression: parse_expression(cursor, 0)?,
+            })
+        }
         token if token.is_keyword(Keyword::Sequence) => parse_sequence_statement(cursor),
         token if token.is_keyword(Keyword::With) => parse_with_statement(cursor),
+        token if token.is_keyword(Keyword::Let) => parse_let_statement(cursor),
         _ => parse_expression(cursor, 0).map(|e| Statement::Expression(e)),
     }
 }
 
 fn parse_property(cursor: &mut TokenStreamCursor) -> Result<Property, ParseError> {
     let name = parse_identifier(cursor)?; // name
-    parse_punctuation(cursor, Punctuator::Colon)?; // ':'
+    parse_punctuator(cursor, Punctuator::Colon)?; // ':'
 
     let value = parse_expression(cursor, 0)?;
 
     Ok(Property { name, value })
+}
+
+fn parse_let_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
+    cursor.next(); // 'let'
+
+    let name = parse_identifier(cursor)?;
+
+    skip_end_of_lines(cursor);
+    parse_operator(cursor, Operator::Assign)?;
+    skip_end_of_lines(cursor);
+
+    let value = parse_expression(cursor, 0)?;
+
+    Ok(Statement::Let { name, value })
 }
 
 fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
@@ -79,10 +106,10 @@ fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, Par
 
     properties.push(parse_property(cursor)?);
 
-    while cursor.peek().is_punctuation(Punctuator::Comma) {
+    while cursor.peek().is_punctuator(Punctuator::Comma) {
         cursor.next();
 
-        if cursor.peek().is_punctuation(Punctuator::LeftBrace) {
+        if cursor.peek().is_punctuator(Punctuator::LeftBrace) {
             break; // with a: test, b: 3, { } - still counts
         }
 
@@ -139,29 +166,38 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
         Token::Integer { value, span } => Ok(Expression::Integer { value, span }),
         Token::Float { value, span } => Ok(Expression::Float { value, span }),
         Token::Identifier(identifier) => Ok(Expression::Identifier(identifier)),
-        token if token.is_punctuation(Punctuator::LeftParen) => {
+        token if token.is_keyword(Keyword::LoadSample) => {
+            dbg!("Detected load_sample");
+            let sample = parse_expression(cursor, 0)?;
+
+            Ok(Expression::LoadSample {
+                span: Span::new(token.span().start(), sample.span().end()),
+                sample: Box::new(sample),
+            })
+        }
+        token if token.is_punctuator(Punctuator::LeftParen) => {
             let expression = parse_expression(cursor, 0)?;
 
-            parse_punctuation(cursor, Punctuator::RightParen)?; // ')'
+            parse_punctuator(cursor, Punctuator::RightParen)?; // ')'
 
             Ok(expression)
         }
-        token if token.is_punctuation(Punctuator::LeftBracket) => {
+        token if token.is_punctuator(Punctuator::LeftBracket) => {
             let mut expressions = Vec::new();
 
             skip_end_of_lines(cursor);
 
-            if !cursor.peek().is_punctuation(Punctuator::RightBracket) {
+            if !cursor.peek().is_punctuator(Punctuator::RightBracket) {
                 expressions.push(parse_expression(cursor, 0)?);
 
                 skip_end_of_lines(cursor);
 
-                while cursor.peek().is_punctuation(Punctuator::Comma) {
+                while cursor.peek().is_punctuator(Punctuator::Comma) {
                     cursor.next();
 
                     skip_end_of_lines(cursor);
 
-                    if cursor.peek().is_punctuation(Punctuator::RightBracket) {
+                    if cursor.peek().is_punctuator(Punctuator::RightBracket) {
                         break; // [a, b,] - still counts
                     }
 
@@ -181,7 +217,7 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
             span: operator_span,
         } => {
             let Some(prefix_operator_kind) = operator.into_prefix_operator_kind() else {
-                return Err(ParseError::ExpectedExpression { token });
+                return Err(ParseError::ExpectedExpression { got: token });
             };
 
             let operand = parse_expression(cursor, usize::MAX)?;
@@ -194,24 +230,8 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
                 operand: Box::new(operand),
             })
         }
-        token => Err(ParseError::ExpectedExpression { token }),
+        token => Err(ParseError::ExpectedExpression { got: token }),
     }
-}
-
-fn parse_play_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
-    cursor.next(); // 'play' keyword
-
-    Ok(Statement::Play {
-        expression: parse_expression(cursor, 0)?,
-    })
-}
-
-fn parse_wait_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
-    cursor.next(); // 'wait' keyword
-
-    Ok(Statement::Wait {
-        expression: parse_expression(cursor, 0)?,
-    })
 }
 
 fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
@@ -232,14 +252,26 @@ fn parse_identifier(cursor: &mut TokenStreamCursor) -> Result<Identifier, ParseE
     Ok(identifier)
 }
 
-fn parse_punctuation(
+fn parse_punctuator(
     cursor: &mut TokenStreamCursor,
     punctuation: Punctuator,
 ) -> Result<Token, ParseError> {
     let got = cursor.next();
-    if !got.is_punctuation(punctuation) {
+    if !got.is_punctuator(punctuation) {
         return Err(ParseError::ExpectedPunctuation {
             expected: punctuation,
+            got,
+        });
+    }
+
+    Ok(got)
+}
+
+fn parse_operator(cursor: &mut TokenStreamCursor, operator: Operator) -> Result<Token, ParseError> {
+    let got = cursor.next();
+    if !got.is_operator(operator) {
+        return Err(ParseError::ExpectedOperator {
+            expected: operator,
             got,
         });
     }
@@ -256,9 +288,10 @@ fn skip_end_of_lines(cursor: &mut TokenStreamCursor) {
 #[derive(Debug)]
 pub enum ParseError {
     InvalidTokenStream,
-    ExpectedExpression { token: Token },
+    ExpectedExpression { got: Token },
     ExpectedIdentifier { got: Token },
     ExpectedPunctuation { expected: Punctuator, got: Token },
+    ExpectedOperator { expected: Operator, got: Token },
 }
 
 #[cfg(test)]
@@ -266,22 +299,9 @@ mod tests {
     use insta::assert_debug_snapshot;
     use lasso::Rodeo;
 
-    use crate::lang::scan::scan;
+    use crate::{lang::scan::scan, test_parse};
 
     use super::parse;
-
-    macro_rules! test_parse {
-        ($(($name:ident, $source:expr)),* $(,)?) => {
-            $(
-                #[test]
-                fn $name() {
-                    let mut rodeo = Rodeo::new();
-                    let token_stream = scan($source, &mut rodeo).expect("Scanning failed");
-                    assert_debug_snapshot!(parse(token_stream));
-                }
-            )*
-        };
-    }
 
     test_parse!(
         (empty, ""),
@@ -302,6 +322,7 @@ mod tests {
 2]
 [1,
 2,]"
-        )
+        ),
+        (let_stmt, "let a = 3 + 2")
     );
 }

@@ -1,10 +1,10 @@
 use lasso::Rodeo;
 
-use crate::lang::{
+use crate::{lang::{
     cursor::Cursor,
     location::{Span, Spanned},
     token::{Keyword, Operator, Punctuator, Token, TokenStream},
-};
+}, match_single_and_two_character_tokens};
 
 use super::token::Identifier;
 
@@ -30,46 +30,6 @@ pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<TokenStream, ScanError> {
     }
 
     Ok(stream)
-}
-
-macro_rules! match_punctuators_and_operators {
-    ($char:expr, $cursor:expr, $start:expr,
-        { $($single_punctuator:pat => $single_punctuator_token:expr,)+ },
-        { $($single_operator:pat => $single_operator_token:expr,)+ },
-        { $($first:pat,$second:pat => $pair_token:expr,)+ }) => {{
-        match ($char, $cursor.peek()) {
-            // Handle two-character operators
-            $(
-                ($first, Some($second)) => {
-                    $cursor.next();
-
-                    Ok(Token::Operator {
-                        operator: $pair_token,
-                        span: Span::new($start, $cursor.location()),
-                    })
-                },
-            )+
-            // Handle single-character operators 
-            $(
-                ($single_operator, _) => Ok(Token::Operator {
-                    operator: $single_operator_token,
-                    span: Span::new($start, $cursor.location()),
-                }),
-            )+
-            // Handle single-character punctuators 
-            $(
-                ($single_punctuator, _) => Ok(Token::Punctuator {
-                    punctuation: $single_punctuator_token,
-                    span: Span::new($start, $cursor.location()),
-                }),
-            )+
-            // Handle unexpected character
-            _ => Err(ScanError::UnexpectedCharacter {
-                character: $char,
-                span: Span::new($start, $cursor.location()),
-            }),
-        }
-    }};
 }
 
 /// Scans the next token in the source text and advances position of the [`Cursor`].
@@ -113,7 +73,7 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
             let start = cursor.location();
             cursor.next();
 
-            match_punctuators_and_operators!(
+            match_single_and_two_character_tokens!(
                 c,
                 cursor,
                 start,
@@ -133,10 +93,12 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
                     '+' => Operator::Plus,
                     '*' => Operator::Star,
                     '/' => Operator::Slash,
+                    '=' => Operator::Assign,
                 },
                 {
                     '-', '=' => Operator::MinusEq,
                     '+', '=' => Operator::PlusEq,
+                    '=', '=' => Operator::Eq,
                 }
             )
         }
@@ -160,26 +122,27 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
 
     let span = Span::new(start, cursor.location());
 
+    fn keyword_from_name(name: &str) -> Option<Keyword> {
+        match name {
+            "with" => Some(Keyword::With),
+            "wait" => Some(Keyword::Wait),
+            "sequence" => Some(Keyword::Sequence),
+            "play" => Some(Keyword::Play),
+            "let" => Some(Keyword::Let),
+            _ => None,
+        }
+    }
+
     match name.as_str() {
-        "with" => Token::Keyword {
-            keyword: Keyword::With,
-            span,
-        },
-        "wait" => Token::Keyword {
-            keyword: Keyword::Wait,
-            span,
-        },
-        "sequence" => Token::Keyword {
-            keyword: Keyword::Sequence,
-            span,
-        },
-        "play" => Token::Keyword {
-            keyword: Keyword::Play,
-            span,
-        },
         "true" => Token::Bool { value: true, span },
         "false" => Token::Bool { value: false, span },
-        _ => Token::Identifier(Identifier::new(rodeo.get_or_intern(name), span)),
+        name => {
+            if let Some(keyword) = keyword_from_name(name) {
+                Token::Keyword { keyword, span }
+            } else {
+                Token::Identifier(Identifier::new(rodeo.get_or_intern(name), span))
+            }
+        }
     }
 }
 
@@ -203,7 +166,7 @@ fn scan_number_or_dot(cursor: &mut Cursor) -> Token {
 
     if end.index() - start.index() == 1 && has_dot {
         return Token::Punctuator {
-            punctuation: Punctuator::Dot,
+            punctuator: Punctuator::Dot,
             span: Span::new(start, end),
         };
     }
@@ -241,19 +204,9 @@ mod tests {
     use insta::assert_debug_snapshot;
     use lasso::Rodeo;
 
-    use super::scan;
+    use crate::test_scan;
 
-    macro_rules! test_scan {
-        ($(($name:ident, $source:expr)),* $(,)?) => {
-            $(
-                #[test]
-                fn $name() {
-                    let mut rodeo = Rodeo::new();
-                    assert_debug_snapshot!(scan($source, &mut rodeo));
-                }
-            )*
-        };
-    }
+    use super::scan;
 
     test_scan!(
         (eof, ""),

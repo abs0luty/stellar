@@ -1,4 +1,5 @@
 mod cursor;
+mod macros;
 
 pub mod ast;
 pub mod location;

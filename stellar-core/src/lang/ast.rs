@@ -30,6 +30,10 @@ pub enum Statement {
         properties: Vec<Property>,
         block: Block,
     },
+    Let {
+        name: Identifier,
+        value: Expression,
+    },
     Expression(Expression),
 }
 
@@ -61,6 +65,10 @@ pub enum Expression {
         span: Span,
     },
     Identifier(Identifier),
+    LoadSample {
+        sample: Box<Expression>,
+        span: Span,
+    },
 }
 
 impl Spanned for Expression {
@@ -73,7 +81,8 @@ impl Spanned for Expression {
             Self::List { span, .. }
             | Self::Bool { span, .. }
             | Self::Float { span, .. }
-            | Self::Integer { span, .. } => *span,
+            | Self::Integer { span, .. }
+            | Self::LoadSample { span, .. } => *span,
             Self::Identifier(identifier) => identifier.span(),
         }
     }
@@ -102,13 +111,15 @@ pub enum BinaryOperatorKind {
     Minus,
     Star,
     Slash,
+    Assign,
 }
 
 impl BinaryOperatorKind {
     pub fn precedence(&self) -> usize {
         match self {
-            Self::Plus | Self::Minus => 1,
-            Self::Star | Self::Slash => 2,
+            Self::Assign => 1,
+            Self::Plus | Self::Minus => 2,
+            Self::Star | Self::Slash => 3,
         }
     }
 }

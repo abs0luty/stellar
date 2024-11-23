@@ -2,7 +2,7 @@ use lasso::Spur;
 
 use crate::lang::location::{Location, Span, Spanned};
 
-use super::ast::{BinaryOperator, BinaryOperatorKind, PrefixOperator, PrefixOperatorKind};
+use super::ast::{BinaryOperatorKind, PrefixOperatorKind};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
@@ -10,6 +10,8 @@ pub enum Keyword {
     With,
     Wait,
     Sequence,
+    LoadSample,
+    Let
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -34,6 +36,8 @@ pub enum Operator {
     MinusEq,
     Star,
     Slash,
+    Assign,
+    Eq,
     Exclamation
 }
 
@@ -44,6 +48,7 @@ impl Operator {
             Self::Minus => Some(BinaryOperatorKind::Minus),
             Self::Star => Some(BinaryOperatorKind::Star),
             Self::Slash => Some(BinaryOperatorKind::Slash),
+            Self::Assign => Some(BinaryOperatorKind::Assign),
             _ => None,
         }
     }
@@ -90,7 +95,7 @@ pub enum Token {
         span: Span,
     },
     Punctuator {
-        punctuation: Punctuator,
+        punctuator: Punctuator,
         span: Span,
     },
     Float {
@@ -133,12 +138,22 @@ impl Token {
         }
     }
 
-    pub fn is_punctuation(&self, punctuation: Punctuator) -> bool {
+    pub fn is_punctuator(&self, punctuator: Punctuator) -> bool {
         match self {
             Self::Punctuator {
-                punctuation: my_punctuation,
+                punctuator: my_punctuator,
                 ..
-            } => punctuation == *my_punctuation,
+            } => punctuator == *my_punctuator,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator(&self, operator: Operator) -> bool {
+        match self {
+            Self::Operator {
+                operator: my_operator,
+                ..
+            } => operator == *my_operator,
             _ => false,
         }
     }
