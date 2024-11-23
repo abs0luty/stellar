@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./stellar.png" width="40%">
+<img src="./stellar.png" width="30%">
 </p>
 
 <b>Stellar</b> is a music programming language designed to help you create, play, and experiment with music effortlessly. Whether you're a beginner or an experienced coder, Stellar makes music programming fun and intuitive!
