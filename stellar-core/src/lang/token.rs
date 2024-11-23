@@ -13,7 +13,7 @@ pub enum Keyword {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub enum Punctuation {
+pub enum Punctuator {
     Exclamation,
     LeftBrace,
     RightBrace,
@@ -21,18 +21,23 @@ pub enum Punctuation {
     RightBracket,
     LeftParen,
     RightParen,
+    Dot,
+    Colon,
+    Comma,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Operator {
     Plus,
     Minus,
     PlusEq,
     MinusEq,
     Star,
     Slash,
-    Dot,
-    Colon,
-    Comma,
+    Exclamation
 }
 
-impl Punctuation {
+impl Operator {
     pub fn into_binary_operator_kind(&self) -> Option<BinaryOperatorKind> {
         match self {
             Self::Plus => Some(BinaryOperatorKind::Plus),
@@ -80,8 +85,12 @@ pub enum Token {
         span: Span,
     },
     Identifier(Identifier),
-    Punctuation {
-        punctuation: Punctuation,
+    Operator {
+        operator: Operator,
+        span: Span,
+    },
+    Punctuator {
+        punctuation: Punctuator,
         span: Span,
     },
     Float {
@@ -124,35 +133,13 @@ impl Token {
         }
     }
 
-    pub fn is_punctuation(&self, punctuation: Punctuation) -> bool {
+    pub fn is_punctuation(&self, punctuation: Punctuator) -> bool {
         match self {
-            Self::Punctuation {
+            Self::Punctuator {
                 punctuation: my_punctuation,
                 ..
             } => punctuation == *my_punctuation,
             _ => false,
-        }
-    }
-
-    pub fn into_binary_operator(&self) -> Option<BinaryOperator> {
-        match self {
-            Self::Punctuation { punctuation, span } => {
-                let kind = punctuation.into_binary_operator_kind()?;
-
-                Some(BinaryOperator { kind, span: *span })
-            }
-            _ => None,
-        }
-    }
-
-    pub fn into_prefix_operator(&self) -> Option<PrefixOperator> {
-        match self {
-            Self::Punctuation { punctuation, span } => {
-                let kind = punctuation.into_prefix_operator_kind()?;
-
-                Some(PrefixOperator { kind, span: *span })
-            }
-            _ => None,
         }
     }
 
@@ -169,7 +156,8 @@ impl Spanned for Token {
                 Location::new(location.line(), location.column() + 1, location.index() + 1),
             ),
             Self::Identifier(Identifier { span, .. })
-            | Self::Punctuation { span, .. }
+            | Self::Punctuator { span, .. }
+            | Self::Operator { span, .. }
             | Self::Keyword { span, .. }
             | Self::Integer { span, .. }
             | Self::Float { span, .. }
@@ -247,7 +235,7 @@ impl TokenStreamCursor {
     }
 
     /// Provides a glimpse of the next token without advancing the cursor
-    /// (compared to [`TokenStreamCursor::next`]). If no more tokens are 
+    /// (compared to [`TokenStreamCursor::next`]). If no more tokens are
     /// available, an EOF (End Of File) token is returned.
     pub fn peek(&mut self) -> Token {
         self.stream.get(self.location)

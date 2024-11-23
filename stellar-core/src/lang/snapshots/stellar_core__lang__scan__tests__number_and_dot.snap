@@ -36,7 +36,7 @@ Ok(
                     },
                 },
             },
-            Punctuation {
+            Punctuator {
                 punctuation: Dot,
                 span: Span {
                     start: Location {

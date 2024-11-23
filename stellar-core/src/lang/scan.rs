@@ -3,7 +3,7 @@ use lasso::Rodeo;
 use crate::lang::{
     cursor::Cursor,
     location::{Span, Spanned},
-    token::{Keyword, Punctuation, Token, TokenStream},
+    token::{Keyword, Operator, Punctuator, Token, TokenStream},
 };
 
 use super::token::Identifier;
@@ -32,26 +32,34 @@ pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<TokenStream, ScanError> {
     Ok(stream)
 }
 
-macro_rules! match_punctuation {
+macro_rules! match_punctuators_and_operators {
     ($char:expr, $cursor:expr, $start:expr,
-        { $($single:pat => $single_token:expr,)+ },
+        { $($single_punctuator:pat => $single_punctuator_token:expr,)+ },
+        { $($single_operator:pat => $single_operator_token:expr,)+ },
         { $($first:pat,$second:pat => $pair_token:expr,)+ }) => {{
         match ($char, $cursor.peek()) {
-            // Handle two-character punctuations
+            // Handle two-character operators
             $(
                 ($first, Some($second)) => {
                     $cursor.next();
 
-                    Ok(Token::Punctuation {
-                        punctuation: $pair_token,
+                    Ok(Token::Operator {
+                        operator: $pair_token,
                         span: Span::new($start, $cursor.location()),
                     })
                 },
             )+
-            // Handle single-character punctuations
+            // Handle single-character operators 
             $(
-                ($single, _) => Ok(Token::Punctuation {
-                    punctuation: $single_token,
+                ($single_operator, _) => Ok(Token::Operator {
+                    operator: $single_operator_token,
+                    span: Span::new($start, $cursor.location()),
+                }),
+            )+
+            // Handle single-character punctuators 
+            $(
+                ($single_punctuator, _) => Ok(Token::Punctuator {
+                    punctuation: $single_punctuator_token,
                     span: Span::new($start, $cursor.location()),
                 }),
             )+
@@ -105,28 +113,30 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
             let start = cursor.location();
             cursor.next();
 
-            match_punctuation!(
+            match_punctuators_and_operators!(
                 c,
                 cursor,
                 start,
                 {
-                    '-' => Punctuation::Minus,
-                    '+' => Punctuation::Plus,
-                    '*' => Punctuation::Star,
-                    '/' => Punctuation::Slash,
-                    '{' => Punctuation::LeftBrace,
-                    '}' => Punctuation::RightBrace,
-                    '[' => Punctuation::LeftBracket,
-                    ']' => Punctuation::RightBracket,
-                    '(' => Punctuation::LeftParen,
-                    ')' => Punctuation::RightParen,
-                    ':' => Punctuation::Colon,
-                    '.' => Punctuation::Dot,
-                    ',' => Punctuation::Comma,
+                    '{' => Punctuator::LeftBrace,
+                    '}' => Punctuator::RightBrace,
+                    '[' => Punctuator::LeftBracket,
+                    ']' => Punctuator::RightBracket,
+                    '(' => Punctuator::LeftParen,
+                    ')' => Punctuator::RightParen,
+                    ':' => Punctuator::Colon,
+                    '.' => Punctuator::Dot,
+                    ',' => Punctuator::Comma,
                 },
                 {
-                    '-', '=' => Punctuation::MinusEq,
-                    '+', '=' => Punctuation::PlusEq,
+                    '-' => Operator::Minus,
+                    '+' => Operator::Plus,
+                    '*' => Operator::Star,
+                    '/' => Operator::Slash,
+                },
+                {
+                    '-', '=' => Operator::MinusEq,
+                    '+', '=' => Operator::PlusEq,
                 }
             )
         }
@@ -192,8 +202,8 @@ fn scan_number_or_dot(cursor: &mut Cursor) -> Token {
     let end = cursor.location();
 
     if end.index() - start.index() == 1 && has_dot {
-        return Token::Punctuation {
-            punctuation: Punctuation::Dot,
+        return Token::Punctuator {
+            punctuation: Punctuator::Dot,
             span: Span::new(start, end),
         };
     }

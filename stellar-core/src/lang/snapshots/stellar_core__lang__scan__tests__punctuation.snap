@@ -6,7 +6,7 @@ snapshot_kind: text
 Ok(
     TokenStream(
         [
-            Punctuation {
+            Punctuator {
                 punctuation: LeftParen,
                 span: Span {
                     start: Location {

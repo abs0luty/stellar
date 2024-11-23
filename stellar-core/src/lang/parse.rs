@@ -1,10 +1,13 @@
 use crate::lang::{
     ast::{Block, Expression, Statement},
     location::{Span, Spanned},
-    token::{Keyword, Punctuation, Token, TokenStream, TokenStreamCursor},
+    token::{Keyword, Punctuator, Token, TokenStream, TokenStreamCursor},
 };
 
-use super::{ast::Property, token::Identifier};
+use super::{
+    ast::{BinaryOperator, PrefixOperator, Property},
+    token::Identifier,
+};
 
 /// Parses a given token stream into Abstract Syntax Tree (AST).
 pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
@@ -27,7 +30,7 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
 }
 
 fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
-    let start = parse_punctuation(cursor, Punctuation::LeftBrace)?
+    let start = parse_punctuation(cursor, Punctuator::LeftBrace)?
         .span()
         .start(); // '{'
     let mut statements = Vec::new();
@@ -35,7 +38,7 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
     loop {
         skip_end_of_lines(cursor);
 
-        if cursor.peek().is_punctuation(Punctuation::RightBrace) {
+        if cursor.peek().is_punctuation(Punctuator::RightBrace) {
             break;
         }
 
@@ -62,7 +65,7 @@ fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseErr
 
 fn parse_property(cursor: &mut TokenStreamCursor) -> Result<Property, ParseError> {
     let name = parse_identifier(cursor)?; // name
-    parse_punctuation(cursor, Punctuation::Colon)?; // ':'
+    parse_punctuation(cursor, Punctuator::Colon)?; // ':'
 
     let value = parse_expression(cursor, 0)?;
 
@@ -76,10 +79,10 @@ fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, Par
 
     properties.push(parse_property(cursor)?);
 
-    while cursor.peek().is_punctuation(Punctuation::Comma) {
+    while cursor.peek().is_punctuation(Punctuator::Comma) {
         cursor.next();
 
-        if cursor.peek().is_punctuation(Punctuation::LeftBrace) {
+        if cursor.peek().is_punctuation(Punctuator::LeftBrace) {
             break; // with a: test, b: 3, { } - still counts
         }
 
@@ -97,10 +100,17 @@ fn parse_expression(
 ) -> Result<Expression, ParseError> {
     let mut left = parse_prefix_expression(cursor)?;
 
-    while let Some(operator) = cursor.peek().into_binary_operator() {
-        let operator_precedence = operator.precedence();
+    while let Token::Operator {
+        operator,
+        span: operator_span,
+    } = cursor.peek()
+    {
+        let Some(binary_operator_kind) = operator.into_binary_operator_kind() else {
+            continue;
+        };
 
-        if operator_precedence < precedence {
+        let binary_operator_precedence = binary_operator_kind.precedence();
+        if binary_operator_precedence < precedence {
             break;
         }
 
@@ -110,10 +120,13 @@ fn parse_expression(
         // 2 |  2 # Expression is continued on the new line
         skip_end_of_lines(cursor);
 
-        let right = parse_expression(cursor, operator_precedence + 1)?;
+        let right = parse_expression(cursor, binary_operator_precedence + 1)?;
         left = Expression::Binary {
             left: Box::new(left),
-            operator,
+            operator: BinaryOperator {
+                kind: binary_operator_kind,
+                span: operator_span,
+            },
             right: Box::new(right),
         };
     }
@@ -126,29 +139,29 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
         Token::Integer { value, span } => Ok(Expression::Integer { value, span }),
         Token::Float { value, span } => Ok(Expression::Float { value, span }),
         Token::Identifier(identifier) => Ok(Expression::Identifier(identifier)),
-        token if token.is_punctuation(Punctuation::LeftParen) => {
+        token if token.is_punctuation(Punctuator::LeftParen) => {
             let expression = parse_expression(cursor, 0)?;
 
-            parse_punctuation(cursor, Punctuation::RightParen)?; // ')'
+            parse_punctuation(cursor, Punctuator::RightParen)?; // ')'
 
             Ok(expression)
         }
-        token if token.is_punctuation(Punctuation::LeftBracket) => {
+        token if token.is_punctuation(Punctuator::LeftBracket) => {
             let mut expressions = Vec::new();
 
             skip_end_of_lines(cursor);
 
-            if !cursor.peek().is_punctuation(Punctuation::RightBracket) {
+            if !cursor.peek().is_punctuation(Punctuator::RightBracket) {
                 expressions.push(parse_expression(cursor, 0)?);
 
                 skip_end_of_lines(cursor);
 
-                while cursor.peek().is_punctuation(Punctuation::Comma) {
+                while cursor.peek().is_punctuation(Punctuator::Comma) {
                     cursor.next();
 
                     skip_end_of_lines(cursor);
 
-                    if cursor.peek().is_punctuation(Punctuation::RightBracket) {
+                    if cursor.peek().is_punctuation(Punctuator::RightBracket) {
                         break; // [a, b,] - still counts
                     }
 
@@ -163,18 +176,25 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
                 span: Span::new(token.span().start(), end),
             })
         }
-        token => {
-            let Some(prefix_operator) = token.into_prefix_operator() else {
+        token @ Token::Operator {
+            operator,
+            span: operator_span,
+        } => {
+            let Some(prefix_operator_kind) = operator.into_prefix_operator_kind() else {
                 return Err(ParseError::ExpectedExpression { token });
             };
 
             let operand = parse_expression(cursor, usize::MAX)?;
 
             Ok(Expression::Prefix {
-                operator: prefix_operator,
+                operator: PrefixOperator {
+                    kind: prefix_operator_kind,
+                    span: operator_span,
+                },
                 operand: Box::new(operand),
             })
         }
+        token => Err(ParseError::ExpectedExpression { token }),
     }
 }
 
@@ -214,7 +234,7 @@ fn parse_identifier(cursor: &mut TokenStreamCursor) -> Result<Identifier, ParseE
 
 fn parse_punctuation(
     cursor: &mut TokenStreamCursor,
-    punctuation: Punctuation,
+    punctuation: Punctuator,
 ) -> Result<Token, ParseError> {
     let got = cursor.next();
     if !got.is_punctuation(punctuation) {
@@ -238,7 +258,7 @@ pub enum ParseError {
     InvalidTokenStream,
     ExpectedExpression { token: Token },
     ExpectedIdentifier { got: Token },
-    ExpectedPunctuation { expected: Punctuation, got: Token },
+    ExpectedPunctuation { expected: Punctuator, got: Token },
 }
 
 #[cfg(test)]
@@ -273,12 +293,15 @@ mod tests {
 2 * (3 + b) - 3"
         ),
         (play_and_wait, "play c4 wait 1"),
-        (list, "[1, 2] [1,
+        (
+            list,
+            "[1, 2] [1,
 2]
 [
 1, 
 2]
 [1,
-2,]")
+2,]"
+        )
     );
 }
