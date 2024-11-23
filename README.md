@@ -20,10 +20,20 @@ Stellar is a music programming language designed to help you create, play, and e
 ### 🎶 Playing Simple Notes
 Stellar allows you to play individual notes, chords, and more:
 
+```python
+play c4                # Play a single note
+play [c3, e3, g3]      # Play a chord
+play cmaj7             # Use built-in chord shortcuts
 ```
-C4.play                # Play a single note
-[C3, E3, G3].play      # Play a chord
-Cmaj7.play             # Use built-in chord shortcuts
+
+---
+
+### ⏰ Add Pauses
+
+```python
+play c4
+wait 1   # wait for one tact
+play a4
 ```
 
 ---
@@ -31,16 +41,16 @@ Cmaj7.play             # Use built-in chord shortcuts
 ### 🎛️ Using Custom Samples and Synths
 Use your own sounds and synths to create unique music:
 
-```
+```python
 # Use the synth for notes and chords
 with synth: dsaw {
-    [C3, E3, G3].play
-    Cmaj7.play
+    play [c3, e3, g3]
+    play cmaj7
 }
 
 # Load and play an audio sample
 let mykick = sample("lib/kick2.mp3")
-mykick.play
+play mykick
 ```
 
 ---
@@ -48,17 +58,17 @@ mykick.play
 ### 🔁 Reuse Code with Sequences
 Organize your music with reusable sequences:
 
-```
+```python
 # Define a sequence
 sequence test {
-    Cmaj.play       
-    Am.play         
-    Fmaj.play       
-    G7.play
+    play cmaj
+    play am
+    play fmaj
+    play g7
 }
 
 # Play the sequence
-test.play
+play test
 ```
 
 ---
@@ -66,30 +76,35 @@ test.play
 ### 🥁 Playing Sequences in Parallel
 Layer your music by running sequences simultaneously on different channels:
 
-```
-# Set tempo and steps per second
-bpm 120
-sps 4
+```python
+# Set tempo 
+set_bpm 120
 
 # Play a melody on one channel
-with channel: 0 {
+sequence melody {
     repeat 4 {
-        Cmaj.play       
-        Am.play         
-        Fmaj.play       
-        G7.play
+        play cmaj
+        wait 1
+        play am
+        wait 1
+        play fmaj
+        wait 1
+        play g7
     }
 }
 
 # Add a drum beat on another channel
-with channel: 1 {
+sequence drum {
     repeat 4 {
-        kick.play
+        play kick
         wait 2
     }
 }
+
+play! melody # spans a new channel for playing the sequence
+play drum
 ```
 
 ---
 
-Stellar is designed to spark your creativity—have fun making music! 🎶
+Stellar is designed to spark your creativity - have fun making music! 🎶
