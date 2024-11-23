@@ -66,11 +66,22 @@ macro_rules! match_punctuation {
 
 /// Scans the next token in the source text and advances position of the [`Cursor`].
 fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, ScanError> {
-    // Skipping whitespace characters
-    while cursor.peek().is_some_and(
-        |c| c.is_whitespace() && c != '\n', // Line breaks are counted.
-    ) {
-        cursor.next();
+    while let Some(c) = cursor.peek() {
+        match c {
+            // Skip whitespace (except line breaks).
+            c if c.is_whitespace() && c != '\n' => {
+                cursor.next();
+            }
+            // Skip single-line comments starting with '#'.
+            '#' => {
+                while let Some(c) = cursor.next() {
+                    if c == '\n' {
+                        break; // Stop skipping at the end of the line.
+                    }
+                }
+            }
+            _ => break, // Stop skipping when non-whitespace and non-comment are found.
+        }
     }
 
     let Some(c) = cursor.peek() else {
