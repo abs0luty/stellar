@@ -19,7 +19,7 @@ pub fn parse(stream: TokenStream) -> Result<Vec<Statement>, ParseError> {
     loop {
         skip_end_of_lines(&mut cursor);
 
-        if cursor.peek().is_eof() {
+        if cursor.peek().is_end_of_file() {
             break;
         }
 
@@ -280,7 +280,7 @@ fn parse_operator(cursor: &mut TokenStreamCursor, operator: Operator) -> Result<
 }
 
 fn skip_end_of_lines(cursor: &mut TokenStreamCursor) {
-    while cursor.peek().is_eol() {
+    while cursor.peek().is_end_of_line() {
         cursor.next();
     }
 }

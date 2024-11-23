@@ -20,7 +20,7 @@ pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<TokenStream, ScanError> {
     loop {
         let token = scan_next_token(&mut cursor, rodeo)?;
 
-        if let Token::EOF { .. } = token {
+        if let Token::EndOfFile { .. } = token {
             stream.push(token);
 
             break;
@@ -53,7 +53,7 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
     }
 
     let Some(c) = cursor.peek() else {
-        return Ok(Token::EOF {
+        return Ok(Token::EndOfFile {
             location: cursor.location(),
         });
     };
@@ -63,7 +63,7 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
             let location = cursor.location();
             cursor.next();
 
-            Ok(Token::EOL {
+            Ok(Token::EndOfLine {
                 span: Span::new(location, cursor.location()),
             })
         }

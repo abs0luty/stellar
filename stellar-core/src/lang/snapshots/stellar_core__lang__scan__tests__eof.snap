@@ -6,7 +6,7 @@ snapshot_kind: text
 Ok(
     TokenStream(
         [
-            EOF {
+            EndOfFile {
                 location: Location {
                     line: 1,
                     column: 0,

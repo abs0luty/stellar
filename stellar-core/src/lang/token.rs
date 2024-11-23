@@ -110,22 +110,22 @@ pub enum Token {
         value: bool,
         span: Span,
     },
-    EOL {
+    EndOfLine {
         span: Span,
     },
-    EOF {
+    EndOfFile {
         /// Location of the last byte in the source file.
         location: Location,
     },
 }
 
 impl Token {
-    pub fn is_eof(&self) -> bool {
-        matches!(self, Self::EOF { .. })
+    pub fn is_end_of_file(&self) -> bool {
+        matches!(self, Self::EndOfFile { .. })
     }
 
-    pub fn is_eol(&self) -> bool {
-        matches!(self, Self::EOL { .. })
+    pub fn is_end_of_line(&self) -> bool {
+        matches!(self, Self::EndOfLine { .. })
     }
 
     pub fn is_keyword(&self, keyword: Keyword) -> bool {
@@ -166,7 +166,7 @@ impl Token {
 impl Spanned for Token {
     fn span(&self) -> Span {
         match self {
-            Self::EOF { location } => Span::new(
+            Self::EndOfFile { location } => Span::new(
                 *location,
                 Location::new(location.line(), location.column() + 1, location.index() + 1),
             ),
@@ -177,7 +177,7 @@ impl Spanned for Token {
             | Self::Integer { span, .. }
             | Self::Float { span, .. }
             | Self::Bool { span, .. }
-            | Self::EOL { span } => *span,
+            | Self::EndOfLine { span } => *span,
         }
     }
 }
@@ -200,7 +200,7 @@ impl TokenStream {
     /// is out of bounds, EOF token (End Of File) is returned.
     fn get(&self, index: usize) -> Token {
         if index > self.0.len() {
-            self.0.last().copied().unwrap_or(Token::EOF {
+            self.0.last().copied().unwrap_or(Token::EndOfFile {
                 location: Location::sof(),
             })
         } else {
@@ -211,7 +211,7 @@ impl TokenStream {
     /// Returns a cursor over the token stream. See [`TokenStreamCursor`] for more details.
     pub fn into_cursor(self) -> Option<TokenStreamCursor> {
         // Ensure last token is EOF.
-        if self.0.last().map_or(true, |maybe_eof| !maybe_eof.is_eof()) {
+        if self.0.last().map_or(true, |maybe_eof| !maybe_eof.is_end_of_file()) {
             return None;
         }
 

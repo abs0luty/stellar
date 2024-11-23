@@ -51,7 +51,7 @@ Ok(
                     },
                 },
             },
-            EOF {
+            EndOfFile {
                 location: Location {
                     line: 1,
                     column: 6,
