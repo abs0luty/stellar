@@ -59,35 +59,28 @@ fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseErr
             cursor.next(); // 'play' keyword
 
             Ok(Statement::Play {
-                expression: parse_expression(cursor, 0)?,
+                expression: parse_expression(cursor)?,
             })
         }
         token if token.is_keyword(Keyword::Wait) => {
             cursor.next(); // 'wait' keyword
 
             Ok(Statement::Wait {
-                expression: parse_expression(cursor, 0)?,
+                expression: parse_expression(cursor)?,
             })
         }
         token if token.is_keyword(Keyword::Sequence) => parse_sequence_statement(cursor),
         token if token.is_keyword(Keyword::With) => parse_with_statement(cursor),
         token if token.is_keyword(Keyword::Let) => parse_let_statement(cursor),
-        _ => parse_expression(cursor, 0).map(|e| Statement::Expression(e)),
+        _ => parse_expression(cursor).map(|e| Statement::Expression(e)),
     }
 }
 
-/// Parses a next expression in a token stream, taking operator precedence into account:
-/// - If `precedence == 0`, binary operators are considered and parsed according to their precedence levels:
-///   ```
-///   3 + 2 * 4
-///   ^^^^^^^^^------ parse_expression(cursor, 0)
-///   ```
-/// - If `precedence == usize::MAX`, only the first prefix expression is parsed, and binary operators are ignored.
-///   ```
-///   3 + 2 * 4
-///   ^-------------- parse_expression(cursor, usize::MAX)
-///   ```
-fn parse_expression(
+fn parse_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
+    parse_expression_with_precedence(cursor, 0)
+}
+
+fn parse_expression_with_precedence(
     cursor: &mut TokenStreamCursor,
     precedence: usize,
 ) -> Result<Expression, ParseError> {
@@ -113,7 +106,7 @@ fn parse_expression(
         // 2 |  2 # Expression is continued on the new line
         skip_end_of_lines(cursor);
 
-        let right = parse_expression(cursor, binary_operator_precedence + 1)?;
+        let right = parse_expression_with_precedence(cursor, binary_operator_precedence + 1)?;
         left = Expression::Binary {
             left: Box::new(left),
             operator: BinaryOperator {
@@ -127,40 +120,29 @@ fn parse_expression(
     Ok(left)
 }
 
-/// Parses a left hand side of the potential binary expression, i.e:
-/// - 3         (literal)
-/// - a         (name)
-/// - (2 + 3)   (parenthesized)
-/// - [a, b, c] (list)
-/// - ...       (any value expression)
-/// - !true     (expression with a prefix op)
+/// Parses a left hand side of the potential binary expression.
 fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression, ParseError> {
     match cursor.next() {
+        // Literals.
         Token::Integer { value, span } => Ok(Expression::Integer { value, span }),
         Token::Float { value, span } => Ok(Expression::Float { value, span }),
         Token::Identifier(identifier) => Ok(Expression::Identifier(identifier)),
-        token if token.is_keyword(Keyword::LoadSample) => {
-            let sample = parse_expression(cursor, 0)?;
-
-            Ok(Expression::LoadSample {
-                span: Span::new(token.span().start(), sample.span().end()),
-                sample: Box::new(sample),
-            })
-        }
+        // Parenthesized expression.
         token if token.is_punctuator(Punctuator::LeftParen) => {
-            let expression = parse_expression(cursor, 0)?;
+            let expression = parse_expression(cursor)?;
 
             parse_punctuator(cursor, Punctuator::RightParen)?; // ')'
 
             Ok(expression)
         }
+        // List expression.
         token if token.is_punctuator(Punctuator::LeftBracket) => {
             let mut expressions = Vec::new();
 
             skip_end_of_lines(cursor);
 
             if !cursor.peek().is_punctuator(Punctuator::RightBracket) {
-                expressions.push(parse_expression(cursor, 0)?);
+                expressions.push(parse_expression(cursor)?);
 
                 skip_end_of_lines(cursor);
 
@@ -173,7 +155,7 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
                         break; // [a, b,] - still counts
                     }
 
-                    expressions.push(parse_expression(cursor, 0)?)
+                    expressions.push(parse_expression(cursor)?)
                 }
             }
 
@@ -184,6 +166,14 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
                 span: Span::new(token.span().start(), end),
             })
         }
+        token if token.is_keyword(Keyword::LoadSample) => {
+            let sample = parse_expression(cursor)?;
+
+            Ok(Expression::LoadSample {
+                span: Span::new(token.span().start(), sample.span().end()),
+                sample: Box::new(sample),
+            })
+        }
         token @ Token::Operator {
             operator,
             span: operator_span,
@@ -192,7 +182,7 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
                 return Err(ParseError::ExpectedExpression { got: token });
             };
 
-            let operand = parse_expression(cursor, usize::MAX)?;
+            let operand = parse_prefix_expression(cursor)?;
 
             Ok(Expression::Prefix {
                 operator: PrefixOperator {
@@ -224,7 +214,7 @@ fn parse_let_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, Pars
     parse_operator(cursor, Operator::Assign)?;
     skip_end_of_lines(cursor);
 
-    let value = parse_expression(cursor, 0)?;
+    let value = parse_expression(cursor)?;
 
     Ok(Statement::Let { name, value })
 }
@@ -237,7 +227,7 @@ fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, Par
         let name = parse_identifier(cursor)?;
         parse_punctuator(cursor, Punctuator::Colon)?;
 
-        let value = parse_expression(cursor, 0)?;
+        let value = parse_expression(cursor)?;
 
         Ok(Property { name, value })
     }
