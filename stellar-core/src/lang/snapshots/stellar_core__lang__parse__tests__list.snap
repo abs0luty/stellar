@@ -60,13 +60,13 @@ Ok(
                         value: 1,
                         span: Span {
                             start: Location {
-                                line: 1,
-                                column: 8,
+                                line: 2,
+                                column: 1,
                                 index: 8,
                             },
                             end: Location {
-                                line: 1,
-                                column: 9,
+                                line: 2,
+                                column: 2,
                                 index: 9,
                             },
                         },
@@ -75,76 +75,76 @@ Ok(
                         value: 2,
                         span: Span {
                             start: Location {
-                                line: 2,
+                                line: 3,
                                 column: 0,
-                                index: 11,
+                                index: 12,
                             },
                             end: Location {
-                                line: 2,
+                                line: 3,
                                 column: 1,
-                                index: 12,
+                                index: 13,
                             },
                         },
                     },
                 ],
                 span: Span {
                     start: Location {
-                        line: 1,
-                        column: 7,
+                        line: 2,
+                        column: 0,
                         index: 7,
                     },
                     end: Location {
-                        line: 2,
-                        column: 2,
-                        index: 13,
-                    },
-                },
-            },
-        ),
-        Expression(
-            List {
-                expressions: [
-                    Integer {
-                        value: 1,
-                        span: Span {
-                            start: Location {
-                                line: 4,
-                                column: 0,
-                                index: 16,
-                            },
-                            end: Location {
-                                line: 4,
-                                column: 1,
-                                index: 17,
-                            },
-                        },
-                    },
-                    Integer {
-                        value: 2,
-                        span: Span {
-                            start: Location {
-                                line: 5,
-                                column: 0,
-                                index: 20,
-                            },
-                            end: Location {
-                                line: 5,
-                                column: 1,
-                                index: 21,
-                            },
-                        },
-                    },
-                ],
-                span: Span {
-                    start: Location {
                         line: 3,
-                        column: 0,
+                        column: 2,
                         index: 14,
                     },
+                },
+            },
+        ),
+        Expression(
+            List {
+                expressions: [
+                    Integer {
+                        value: 1,
+                        span: Span {
+                            start: Location {
+                                line: 5,
+                                column: 0,
+                                index: 17,
+                            },
+                            end: Location {
+                                line: 5,
+                                column: 1,
+                                index: 18,
+                            },
+                        },
+                    },
+                    Integer {
+                        value: 2,
+                        span: Span {
+                            start: Location {
+                                line: 6,
+                                column: 0,
+                                index: 21,
+                            },
+                            end: Location {
+                                line: 6,
+                                column: 1,
+                                index: 22,
+                            },
+                        },
+                    },
+                ],
+                span: Span {
+                    start: Location {
+                        line: 4,
+                        column: 0,
+                        index: 15,
+                    },
                     end: Location {
-                        line: 5,
+                        line: 6,
                         column: 2,
-                        index: 22,
+                        index: 23,
                     },
                 },
             },
@@ -156,14 +156,14 @@ Ok(
                         value: 1,
                         span: Span {
                             start: Location {
-                                line: 6,
+                                line: 7,
                                 column: 1,
-                                index: 24,
+                                index: 25,
                             },
                             end: Location {
-                                line: 6,
+                                line: 7,
                                 column: 2,
-                                index: 25,
+                                index: 26,
                             },
                         },
                     },
@@ -171,28 +171,28 @@ Ok(
                         value: 2,
                         span: Span {
                             start: Location {
-                                line: 7,
+                                line: 8,
                                 column: 0,
-                                index: 27,
+                                index: 28,
                             },
                             end: Location {
-                                line: 7,
+                                line: 8,
                                 column: 1,
-                                index: 28,
+                                index: 29,
                             },
                         },
                     },
                 ],
                 span: Span {
                     start: Location {
-                        line: 6,
+                        line: 7,
                         column: 0,
-                        index: 23,
+                        index: 24,
                     },
                     end: Location {
-                        line: 7,
+                        line: 8,
                         column: 3,
-                        index: 30,
+                        index: 31,
                     },
                 },
             },

@@ -12,13 +12,13 @@ Ok(
                     span: Span {
                         start: Location {
                             line: 2,
-                            column: 12,
-                            index: 16,
+                            column: 13,
+                            index: 18,
                         },
                         end: Location {
                             line: 2,
-                            column: 13,
-                            index: 17,
+                            column: 14,
+                            index: 19,
                         },
                     },
                 },
@@ -61,13 +61,13 @@ Ok(
                             span: Span {
                                 start: Location {
                                     line: 2,
-                                    column: 2,
-                                    index: 6,
+                                    column: 3,
+                                    index: 8,
                                 },
                                 end: Location {
                                     line: 2,
-                                    column: 3,
-                                    index: 7,
+                                    column: 4,
+                                    index: 9,
                                 },
                             },
                         },
@@ -76,13 +76,13 @@ Ok(
                             span: Span {
                                 start: Location {
                                     line: 2,
-                                    column: 0,
-                                    index: 4,
+                                    column: 1,
+                                    index: 6,
                                 },
                                 end: Location {
                                     line: 2,
-                                    column: 1,
-                                    index: 5,
+                                    column: 2,
+                                    index: 7,
                                 },
                             },
                         },
@@ -92,13 +92,13 @@ Ok(
                                 span: Span {
                                     start: Location {
                                         line: 2,
-                                        column: 7,
-                                        index: 11,
+                                        column: 8,
+                                        index: 13,
                                     },
                                     end: Location {
                                         line: 2,
-                                        column: 8,
-                                        index: 12,
+                                        column: 9,
+                                        index: 14,
                                     },
                                 },
                             },
@@ -107,13 +107,13 @@ Ok(
                                 span: Span {
                                     start: Location {
                                         line: 2,
-                                        column: 5,
-                                        index: 9,
+                                        column: 6,
+                                        index: 11,
                                     },
                                     end: Location {
                                         line: 2,
-                                        column: 6,
-                                        index: 10,
+                                        column: 7,
+                                        index: 12,
                                     },
                                 },
                             },
@@ -123,13 +123,13 @@ Ok(
                                     span: Span {
                                         start: Location {
                                             line: 2,
-                                            column: 9,
-                                            index: 13,
+                                            column: 10,
+                                            index: 15,
                                         },
                                         end: Location {
                                             line: 2,
-                                            column: 10,
-                                            index: 14,
+                                            column: 11,
+                                            index: 16,
                                         },
                                     },
                                 },
@@ -142,13 +142,13 @@ Ok(
                     span: Span {
                         start: Location {
                             line: 2,
-                            column: 14,
-                            index: 18,
+                            column: 15,
+                            index: 20,
                         },
                         end: Location {
                             line: 2,
-                            column: 15,
-                            index: 19,
+                            column: 16,
+                            index: 21,
                         },
                     },
                 },

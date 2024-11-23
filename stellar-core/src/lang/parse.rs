@@ -307,22 +307,9 @@ mod tests {
         (empty, ""),
         (with, "with a: 3, b: 4, {}"),
         (sequence, "sequence test {}"),
-        (
-            binary_expr,
-            "a +
-2 * (3 + b) - 3"
-        ),
+        (binary_expr, "a + \n 2 * (3 + b) - 3"),
         (play_and_wait, "play c4 wait 1"),
-        (
-            list,
-            "[1, 2] [1,
-2]
-[
-1, 
-2]
-[1,
-2,]"
-        ),
+        (list, "[1, 2]\n[1, \n2]\n[\n1, \n2]\n[1,\n2,]"),
         (let_stmt, "let a = 3 + 2")
     );
 }
