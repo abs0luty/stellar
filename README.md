@@ -1,4 +1,17 @@
-<table style="border-collapse: collapse; border: none;">
+<style>
+table {
+    border-collapse: collapse;
+}
+table, th, td {
+   border: none;
+}
+blockquote {
+    border-left: none;
+    padding-left: 10px;
+}
+</style>
+
+<table>
 <tr>
 <td width="30%" valign="top">
 <img src="./stellar.png" width="50%">
