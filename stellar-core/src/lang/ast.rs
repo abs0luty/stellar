@@ -5,7 +5,7 @@ use super::{location::Spanned, token::Identifier};
 #[derive(Debug, PartialEq)]
 pub struct Property {
     pub name: Identifier,
-    pub value: Expression
+    pub value: Expression,
 }
 
 impl Spanned for Property {
@@ -16,9 +16,21 @@ impl Spanned for Property {
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
-    Sequence { name: Identifier, block: Block },
-    With { properties: Vec<Property>, block: Block },
-    Expression(Expression)
+    Wait {
+        expression: Expression,
+    },
+    Play {
+        expression: Expression,
+    },
+    Sequence {
+        name: Identifier,
+        block: Block,
+    },
+    With {
+        properties: Vec<Property>,
+        block: Block,
+    },
+    Expression(Expression),
 }
 
 #[derive(Debug, PartialEq)]
@@ -44,7 +56,7 @@ pub enum Expression {
         operator: PrefixOperator,
         operand: Box<Expression>,
     },
-    Identifier(Identifier)
+    Identifier(Identifier),
 }
 
 impl Spanned for Expression {
@@ -57,7 +69,7 @@ impl Spanned for Expression {
             Self::Bool { span, .. } | Self::Float { span, .. } | Self::Integer { span, .. } => {
                 *span
             }
-            Self::Identifier(identifier) => identifier.span()
+            Self::Identifier(identifier) => identifier.span(),
         }
     }
 }
@@ -91,7 +103,7 @@ impl BinaryOperatorKind {
     pub fn precedence(&self) -> usize {
         match self {
             Self::Plus | Self::Minus => 1,
-            Self::Star | Self::Slash => 2
+            Self::Star | Self::Slash => 2,
         }
     }
 }

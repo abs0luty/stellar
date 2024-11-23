@@ -1,0 +1,41 @@
+---
+source: stellar-core/src/lang/parse.rs
+expression: parse(token_stream)
+snapshot_kind: text
+---
+Ok(
+    [
+        Sequence {
+            name: Identifier {
+                name: Spur(1),
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 9,
+                        index: 9,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 13,
+                        index: 13,
+                    },
+                },
+            },
+            block: Block {
+                statements: [],
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 14,
+                        index: 14,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 16,
+                        index: 16,
+                    },
+                },
+            },
+        },
+    ],
+)

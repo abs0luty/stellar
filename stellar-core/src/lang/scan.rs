@@ -163,6 +163,10 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
             keyword: Keyword::Sequence,
             span,
         },
+        "play" => Token::Keyword {
+            keyword: Keyword::Play,
+            span,
+        },
         "true" => Token::Bool { value: true, span },
         "false" => Token::Bool { value: false, span },
         _ => Token::Identifier(Identifier::new(rodeo.get_or_intern(name), span)),

@@ -6,6 +6,7 @@ use super::ast::{BinaryOperator, BinaryOperatorKind, PrefixOperator, PrefixOpera
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
+    Play,
     With,
     Wait,
     Sequence,

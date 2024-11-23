@@ -52,6 +52,8 @@ fn parse_block(cursor: &mut TokenStreamCursor) -> Result<Block, ParseError> {
 
 fn parse_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
     match cursor.peek() {
+        token if token.is_keyword(Keyword::Play) => parse_play_statement(cursor),
+        token if token.is_keyword(Keyword::Wait) => parse_wait_statement(cursor),
         token if token.is_keyword(Keyword::Sequence) => parse_sequence_statement(cursor),
         token if token.is_keyword(Keyword::With) => parse_with_statement(cursor),
         _ => parse_expression(cursor, 0).map(|e| Statement::Expression(e)),
@@ -160,6 +162,22 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
     }
 }
 
+fn parse_play_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
+    cursor.next(); // 'play' keyword
+
+    Ok(Statement::Play {
+        expression: parse_expression(cursor, 0)?,
+    })
+}
+
+fn parse_wait_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
+    cursor.next(); // 'wait' keyword
+
+    Ok(Statement::Wait {
+        expression: parse_expression(cursor, 0)?,
+    })
+}
+
 fn parse_sequence_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, ParseError> {
     cursor.next(); // 'sequence' keyword
 
@@ -232,10 +250,12 @@ mod tests {
     test_parse!(
         (empty, ""),
         (with, "with a: 3, b: 4, {}"),
+        (sequence, "sequence test {}"),
         (
             binary_expr,
             "a +
 2 * (3 + b) - 3"
         ),
+        (play_and_wait, "play c4 wait 1")
     );
 }
