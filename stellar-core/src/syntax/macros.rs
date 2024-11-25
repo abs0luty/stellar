@@ -7,8 +7,7 @@ macro_rules! test_parse {
         $(
             #[test]
             fn $name() {
-                let mut rodeo = Rodeo::new();
-                let token_stream = scan($source, &mut rodeo).expect("Scanning failed");
+                let token_stream = scan($source).expect("Scanning failed");
                 assert_debug_snapshot!(parse(token_stream));
             }
         )*
@@ -22,8 +21,7 @@ macro_rules! test_scan {
         $(
             #[test]
             fn $name() {
-                let mut rodeo = Rodeo::new();
-                assert_debug_snapshot!(scan($source, &mut rodeo));
+                assert_debug_snapshot!(scan($source));
             }
         )*
     };

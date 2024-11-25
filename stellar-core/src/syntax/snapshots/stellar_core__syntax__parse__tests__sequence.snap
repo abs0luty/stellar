@@ -1,5 +1,5 @@
 ---
-source: stellar-core/src/lang/parse.rs
+source: stellar-core/src/syntax/parse.rs
 expression: parse(token_stream)
 snapshot_kind: text
 ---
@@ -7,7 +7,7 @@ Ok(
     [
         Sequence {
             name: Identifier {
-                name: Spur(1),
+                name: StringId("test"),
                 span: Span {
                     start: Location {
                         line: 1,

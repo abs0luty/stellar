@@ -1,10 +1,12 @@
-use lasso::Rodeo;
-
-use crate::{lang::{
-    cursor::Cursor,
-    location::{Span, Spanned},
-    token::{Keyword, Operator, Punctuator, Token, TokenStream},
-}, match_single_and_two_character_tokens};
+use crate::{
+    match_single_and_two_character_tokens,
+    syntax::{
+        cursor::Cursor,
+        location::{Span, Spanned},
+        string_id::StringId,
+        token::{Keyword, Operator, Punctuator, Token, TokenStream},
+    },
+};
 
 use super::token::Identifier;
 
@@ -13,12 +15,12 @@ use super::token::Identifier;
 /// # Errors
 /// In case any obvious syntax errors, which affected the scanning process
 /// were found, [`ScannerError`] will be returned.
-pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<TokenStream, ScanError> {
+pub fn scan(source: &str) -> Result<TokenStream, ScanError> {
     let mut cursor = Cursor::new(source);
     let mut stream = TokenStream::new();
 
     loop {
-        let token = scan_next_token(&mut cursor, rodeo)?;
+        let token = scan_next_token(&mut cursor)?;
 
         if let Token::EndOfFile { .. } = token {
             stream.push(token);
@@ -33,7 +35,7 @@ pub fn scan(source: &str, rodeo: &mut Rodeo) -> Result<TokenStream, ScanError> {
 }
 
 /// Scans the next token in the source text and advances position of the [`Cursor`].
-fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, ScanError> {
+fn scan_next_token(cursor: &mut Cursor) -> Result<Token, ScanError> {
     while let Some(c) = cursor.peek() {
         match c {
             // Skip whitespace (except line breaks).
@@ -67,7 +69,8 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
                 span: Span::new(location, cursor.location()),
             })
         }
-        c if c.is_alphabetic() || c == '_' => Ok(scan_name(cursor, rodeo)),
+        '"' => scan_string(cursor),
+        c if c.is_alphabetic() || c == '_' => Ok(scan_name(cursor)),
         c if c.is_numeric() || c == '.' => Ok(scan_number_or_dot(cursor)),
         _ => {
             let start = cursor.location();
@@ -105,14 +108,14 @@ fn scan_next_token(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Result<Token, Scan
     }
 }
 
-/// Scans the next candidate for identifier token in the source text and if
+/// Scans a next candidate for identifier token in the source text and if
 /// its name matches any known keywords returns keyword token.
-fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
+fn scan_name(cursor: &mut Cursor) -> Token {
     let mut name = String::new();
     let start = cursor.location();
 
     while let Some(c) = cursor.peek() {
-        if !c.is_alphanumeric() || c == '_' {
+        if !c.is_alphanumeric() && c != '_' {
             break;
         }
 
@@ -129,6 +132,7 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
             "sequence" => Some(Keyword::Sequence),
             "play" => Some(Keyword::Play),
             "let" => Some(Keyword::Let),
+            "load_sample" => Some(Keyword::LoadSample),
             _ => None,
         }
     }
@@ -140,7 +144,7 @@ fn scan_name(cursor: &mut Cursor, rodeo: &mut Rodeo) -> Token {
             if let Some(keyword) = keyword_from_name(name) {
                 Token::Keyword { keyword, span }
             } else {
-                Token::Identifier(Identifier::new(rodeo.get_or_intern(name), span))
+                Token::Identifier(Identifier::new(StringId::new(name), span))
             }
         }
     }
@@ -186,15 +190,70 @@ fn scan_number_or_dot(cursor: &mut Cursor) -> Token {
     }
 }
 
+/// Scans a string literal.
+fn scan_string(cursor: &mut Cursor) -> Result<Token, ScanError> {
+    let start = cursor.location();
+    cursor.next(); // Consume the opening quote.
+
+    let mut content = String::new();
+
+    while let Some(c) = cursor.next() {
+        match c {
+            '\\' => {
+                // Handle escape sequences.
+                if let Some(escaped_char) = cursor.next() {
+                    match escaped_char {
+                        'n' => content.push('\n'),
+                        't' => content.push('\t'),
+                        'r' => content.push('\r'),
+                        '"' => content.push('"'),
+                        '\\' => content.push('\\'),
+                        _ => {
+                            return Err(ScanError::InvalidEscapeSequence {
+                                span: Span::new(start, cursor.location()),
+                                character: escaped_char,
+                            })
+                        }
+                    }
+                } else {
+                    return Err(ScanError::UnterminatedString {
+                        span: Span::new(start, cursor.location()),
+                    });
+                }
+            }
+            '"' => {
+                // End of string.
+                let end = cursor.location();
+                return Ok(Token::String {
+                    value: StringId::new(content),
+                    span: Span::new(start, end),
+                });
+            }
+            _ => {
+                content.push(c);
+            }
+        }
+    }
+
+    // Unterminated string.
+    Err(ScanError::UnterminatedString {
+        span: Span::new(start, cursor.location()),
+    })
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ScanError {
     UnexpectedCharacter { character: char, span: Span },
+    InvalidEscapeSequence { character: char, span: Span },
+    UnterminatedString { span: Span },
 }
 
 impl Spanned for ScanError {
     fn span(&self) -> Span {
         match self {
-            Self::UnexpectedCharacter { span, .. } => *span,
+            Self::UnexpectedCharacter { span, .. }
+            | Self::InvalidEscapeSequence { span, .. }
+            | Self::UnterminatedString { span } => *span,
         }
     }
 }
@@ -202,7 +261,6 @@ impl Spanned for ScanError {
 #[cfg(test)]
 mod tests {
     use insta::assert_debug_snapshot;
-    use lasso::Rodeo;
 
     use crate::test_scan;
 
@@ -214,5 +272,6 @@ mod tests {
         (punctuation, "("),
         (number_and_dot, "3 3.2."),
         (name, "wait time"),
+        (string, r#""\"Hello,\n \t world\"""#),
     );
 }

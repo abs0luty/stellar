@@ -1,4 +1,4 @@
-use crate::lang::{
+use crate::syntax::{
     ast::{Block, Expression, Statement},
     location::{Span, Spanned},
     token::{Keyword, Punctuator, Token, TokenStream, TokenStreamCursor},
@@ -126,6 +126,7 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
         // Literals.
         Token::Integer { value, span } => Ok(Expression::Integer { value, span }),
         Token::Float { value, span } => Ok(Expression::Float { value, span }),
+        Token::String { value, span } => Ok(Expression::String { value, span }),
         Token::Identifier(identifier) => Ok(Expression::Identifier(identifier)),
         // Parenthesized expression.
         token if token.is_punctuator(Punctuator::LeftParen) => {
@@ -320,9 +321,8 @@ pub enum ParseError {
 #[cfg(test)]
 mod tests {
     use insta::assert_debug_snapshot;
-    use lasso::Rodeo;
 
-    use crate::{lang::scan::scan, test_parse};
+    use crate::{syntax::scan::scan, test_parse};
 
     use super::parse;
 
@@ -330,9 +330,10 @@ mod tests {
         (empty, ""),
         (with, "with a: 3, b: 4, {}"),
         (sequence, "sequence test {}"),
-        (binary_expr, "a + \n 2 * (3 + b) - 3"),
+        (binary_expr, "a + \n 2 * (3 + b) - 3\n\"hello\" + \"world\""),
         (play_and_wait, "play c4 wait 1"),
         (list, "[1, 2]\n[1, \n2]\n[\n1, \n2]\n[1,\n2,]"),
-        (let_stmt, "let a = 3 + 2")
+        (let_stmt, "let a = 3 + 2"),
+        (load_sample, "let kick = load_sample \"test.mp3\"")
     );
 }

@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::Chars};
 
-use crate::lang::location::Location;
+use crate::syntax::location::Location;
 
 pub struct Cursor<'a> {
     source: &'a str,

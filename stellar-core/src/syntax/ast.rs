@@ -1,6 +1,6 @@
-use crate::lang::location::Span;
+use crate::syntax::location::Span;
 
-use super::{location::Spanned, token::Identifier};
+use super::{location::Spanned, string_id::StringId, token::Identifier};
 
 #[derive(Debug, PartialEq)]
 pub struct Property {
@@ -47,6 +47,10 @@ pub enum Expression {
         value: i64,
         span: Span,
     },
+    String {
+        value: StringId,
+        span: Span,
+    },
     Bool {
         value: bool,
         span: Span,
@@ -81,6 +85,7 @@ impl Spanned for Expression {
             Self::List { span, .. }
             | Self::Bool { span, .. }
             | Self::Float { span, .. }
+            | Self::String { span, .. }
             | Self::Integer { span, .. }
             | Self::LoadSample { span, .. } => *span,
             Self::Identifier(identifier) => identifier.span(),

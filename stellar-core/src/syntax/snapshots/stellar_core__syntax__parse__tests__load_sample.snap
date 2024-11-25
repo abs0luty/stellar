@@ -1,0 +1,55 @@
+---
+source: stellar-core/src/syntax/parse.rs
+expression: parse(token_stream)
+snapshot_kind: text
+---
+Ok(
+    [
+        Let {
+            name: Identifier {
+                name: StringId("kick"),
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 4,
+                        index: 4,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 8,
+                        index: 8,
+                    },
+                },
+            },
+            value: LoadSample {
+                sample: String {
+                    value: StringId("test.mp3"),
+                    span: Span {
+                        start: Location {
+                            line: 1,
+                            column: 23,
+                            index: 23,
+                        },
+                        end: Location {
+                            line: 1,
+                            column: 33,
+                            index: 33,
+                        },
+                    },
+                },
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 11,
+                        index: 11,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 33,
+                        index: 33,
+                    },
+                },
+            },
+        },
+    ],
+)

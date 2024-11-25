@@ -1,6 +1,6 @@
 ---
-source: stellar-core/src/lang/scan.rs
-expression: "scan(\"!\", & mut rodeo)"
+source: stellar-core/src/syntax/scan.rs
+expression: "scan(\"!\")"
 snapshot_kind: text
 ---
 Err(

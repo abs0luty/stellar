@@ -1,6 +1,6 @@
 ---
-source: stellar-core/src/lang/scan.rs
-expression: "scan(\"wait time\", & mut rodeo)"
+source: stellar-core/src/syntax/scan.rs
+expression: "scan(\"wait time\")"
 snapshot_kind: text
 ---
 Ok(
@@ -23,7 +23,7 @@ Ok(
             },
             Identifier(
                 Identifier {
-                    name: Spur(1),
+                    name: StringId("time"),
                     span: Span {
                         start: Location {
                             line: 1,

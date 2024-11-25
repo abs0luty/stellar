@@ -1,6 +1,6 @@
 ---
-source: stellar-core/src/lang/scan.rs
-expression: "scan(\"3 3.2.\", & mut rodeo)"
+source: stellar-core/src/syntax/scan.rs
+expression: "scan(\"3 3.2.\")"
 snapshot_kind: text
 ---
 Ok(

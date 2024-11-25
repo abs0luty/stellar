@@ -1,5 +1,5 @@
 ---
-source: stellar-core/src/lang/parse.rs
+source: stellar-core/src/syntax/parse.rs
 expression: parse(token_stream)
 snapshot_kind: text
 ---
@@ -9,7 +9,7 @@ Ok(
             properties: [
                 Property {
                     name: Identifier {
-                        name: Spur(1),
+                        name: StringId("a"),
                         span: Span {
                             start: Location {
                                 line: 1,
@@ -41,7 +41,7 @@ Ok(
                 },
                 Property {
                     name: Identifier {
-                        name: Spur(2),
+                        name: StringId("b"),
                         span: Span {
                             start: Location {
                                 line: 1,

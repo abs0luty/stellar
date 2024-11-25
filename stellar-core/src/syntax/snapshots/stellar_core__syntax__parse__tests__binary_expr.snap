@@ -1,5 +1,5 @@
 ---
-source: stellar-core/src/lang/parse.rs
+source: stellar-core/src/syntax/parse.rs
 expression: parse(token_stream)
 snapshot_kind: text
 ---
@@ -40,7 +40,7 @@ Ok(
                     },
                     left: Identifier(
                         Identifier {
-                            name: Spur(1),
+                            name: StringId("a"),
                             span: Span {
                                 start: Location {
                                     line: 1,
@@ -119,7 +119,7 @@ Ok(
                             },
                             right: Identifier(
                                 Identifier {
-                                    name: Spur(2),
+                                    name: StringId("b"),
                                     span: Span {
                                         start: Location {
                                             line: 2,
@@ -149,6 +149,55 @@ Ok(
                             line: 2,
                             column: 16,
                             index: 21,
+                        },
+                    },
+                },
+            },
+        ),
+        Expression(
+            Binary {
+                operator: BinaryOperator {
+                    kind: Plus,
+                    span: Span {
+                        start: Location {
+                            line: 3,
+                            column: 8,
+                            index: 30,
+                        },
+                        end: Location {
+                            line: 3,
+                            column: 9,
+                            index: 31,
+                        },
+                    },
+                },
+                left: String {
+                    value: StringId("hello"),
+                    span: Span {
+                        start: Location {
+                            line: 3,
+                            column: 0,
+                            index: 22,
+                        },
+                        end: Location {
+                            line: 3,
+                            column: 7,
+                            index: 29,
+                        },
+                    },
+                },
+                right: String {
+                    value: StringId("world"),
+                    span: Span {
+                        start: Location {
+                            line: 3,
+                            column: 10,
+                            index: 32,
+                        },
+                        end: Location {
+                            line: 3,
+                            column: 17,
+                            index: 39,
                         },
                     },
                 },

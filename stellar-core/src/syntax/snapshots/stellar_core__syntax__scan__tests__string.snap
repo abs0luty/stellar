@@ -1,0 +1,34 @@
+---
+source: stellar-core/src/syntax/scan.rs
+expression: "scan(r#\"\"\\\"Hello,\\n \\t world\\\"\"\"#)"
+snapshot_kind: text
+---
+Ok(
+    TokenStream(
+        [
+            String {
+                value: StringId(""Hello,
+                 	 world""),
+                span: Span {
+                    start: Location {
+                        line: 1,
+                        column: 0,
+                        index: 0,
+                    },
+                    end: Location {
+                        line: 1,
+                        column: 23,
+                        index: 23,
+                    },
+                },
+            },
+            EndOfFile {
+                location: Location {
+                    line: 1,
+                    column: 23,
+                    index: 23,
+                },
+            },
+        ],
+    ),
+)

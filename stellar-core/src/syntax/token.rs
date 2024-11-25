@@ -1,8 +1,6 @@
-use lasso::Spur;
+use crate::syntax::location::{Location, Span, Spanned};
 
-use crate::lang::location::{Location, Span, Spanned};
-
-use super::ast::{BinaryOperatorKind, PrefixOperatorKind};
+use super::{ast::{BinaryOperatorKind, PrefixOperatorKind}, string_id::StringId};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Keyword {
@@ -11,7 +9,7 @@ pub enum Keyword {
     Wait,
     Sequence,
     LoadSample,
-    Let
+    Let,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -38,7 +36,7 @@ pub enum Operator {
     Slash,
     Assign,
     Eq,
-    Exclamation
+    Exclamation,
 }
 
 impl Operator {
@@ -63,16 +61,16 @@ impl Operator {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Identifier {
-    name: Spur,
+    name: StringId,
     span: Span,
 }
 
 impl Identifier {
-    pub fn new(name: Spur, span: Span) -> Self {
+    pub fn new(name: StringId, span: Span) -> Self {
         Self { name, span }
     }
 
-    pub fn name(&self) -> Spur {
+    pub fn name(&self) -> StringId {
         self.name
     }
 }
@@ -96,6 +94,10 @@ pub enum Token {
     },
     Punctuator {
         punctuator: Punctuator,
+        span: Span,
+    },
+    String {
+        value: StringId,
         span: Span,
     },
     Float {
@@ -176,6 +178,7 @@ impl Spanned for Token {
             | Self::Keyword { span, .. }
             | Self::Integer { span, .. }
             | Self::Float { span, .. }
+            | Self::String { span, .. }
             | Self::Bool { span, .. }
             | Self::EndOfLine { span } => *span,
         }
@@ -211,7 +214,11 @@ impl TokenStream {
     /// Returns a cursor over the token stream. See [`TokenStreamCursor`] for more details.
     pub fn into_cursor(self) -> Option<TokenStreamCursor> {
         // Ensure last token is EOF.
-        if self.0.last().map_or(true, |maybe_eof| !maybe_eof.is_end_of_file()) {
+        if self
+            .0
+            .last()
+            .map_or(true, |maybe_eof| !maybe_eof.is_end_of_file())
+        {
             return None;
         }
 
