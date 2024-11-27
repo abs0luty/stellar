@@ -102,8 +102,6 @@ fn parse_expression_with_precedence(
 
         cursor.next();
 
-        // 1 |  3 +
-        // 2 |  2 # Expression is continued on the new line
         skip_end_of_lines(cursor);
 
         let right = parse_expression_with_precedence(cursor, binary_operator_precedence + 1)?;
@@ -180,7 +178,10 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
             span: operator_span,
         } => {
             let Some(prefix_operator_kind) = operator.into_prefix_operator_kind() else {
-                return Err(ParseError::ExpectedExpression { got: token });
+                return Err(ParseError::UnexpectedToken {
+                    got: token,
+                    expected: ExpectedItem::Expression,
+                });
             };
 
             let operand = parse_prefix_expression(cursor)?;
@@ -193,7 +194,10 @@ fn parse_prefix_expression(cursor: &mut TokenStreamCursor) -> Result<Expression,
                 operand: Box::new(operand),
             })
         }
-        token => Err(ParseError::ExpectedExpression { got: token }),
+        token => Err(ParseError::UnexpectedToken {
+            got: token,
+            expected: ExpectedItem::Expression,
+        }),
     }
 }
 
@@ -259,7 +263,10 @@ fn parse_with_statement(cursor: &mut TokenStreamCursor) -> Result<Statement, Par
 fn parse_identifier(cursor: &mut TokenStreamCursor) -> Result<Identifier, ParseError> {
     let got = cursor.next();
     let Token::Identifier(identifier) = got else {
-        return Err(ParseError::ExpectedIdentifier { got });
+        return Err(ParseError::UnexpectedToken {
+            got,
+            expected: ExpectedItem::Identifier,
+        });
     };
 
     Ok(identifier)
@@ -276,8 +283,8 @@ fn parse_punctuator(
 ) -> Result<Token, ParseError> {
     let got = cursor.next();
     if !got.is_punctuator(punctuator) {
-        return Err(ParseError::ExpectedPunctuation {
-            expected: punctuator,
+        return Err(ParseError::UnexpectedToken {
+            expected: ExpectedItem::Punctuator(punctuator),
             got,
         });
     }
@@ -293,8 +300,8 @@ fn parse_punctuator(
 fn parse_operator(cursor: &mut TokenStreamCursor, operator: Operator) -> Result<Token, ParseError> {
     let got = cursor.next();
     if !got.is_operator(operator) {
-        return Err(ParseError::ExpectedOperator {
-            expected: operator,
+        return Err(ParseError::UnexpectedToken {
+            expected: ExpectedItem::Operator(operator),
             got,
         });
     }
@@ -310,12 +317,17 @@ fn skip_end_of_lines(cursor: &mut TokenStreamCursor) {
 }
 
 #[derive(Debug)]
+pub enum ExpectedItem {
+    Expression,
+    Identifier,
+    Punctuator(Punctuator),
+    Operator(Operator),
+}
+
+#[derive(Debug)]
 pub enum ParseError {
     InvalidTokenStream,
-    ExpectedExpression { got: Token },
-    ExpectedIdentifier { got: Token },
-    ExpectedPunctuation { expected: Punctuator, got: Token },
-    ExpectedOperator { expected: Operator, got: Token },
+    UnexpectedToken { got: Token, expected: ExpectedItem },
 }
 
 #[cfg(test)]
