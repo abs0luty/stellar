@@ -18,15 +18,15 @@ impl<'a> Cursor<'a> {
     }
 
     pub fn source(&self) -> &'a str {
-        return self.source;
+        self.source
     }
 
     pub fn location(&self) -> Location {
-        return self.location;
+        self.location
     }
 
     pub fn peek(&mut self) -> Option<char> {
-        return self.input.peek().copied();
+        self.input.peek().copied()
     }
 
     pub fn next(&mut self) -> Option<char> {
@@ -46,6 +46,6 @@ impl<'a> Cursor<'a> {
             };
         }
 
-        return self.input.next();
+        self.input.next()
     }
 }
